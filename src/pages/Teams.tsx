@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { fetchTeams } from '../api/client';
 import { mockTeams } from '../api/mockData';
 import type { Team } from '../types';
+
+function getTeamInitials(name: string): string {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 3);
+}
 
 export default function Teams() {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -38,12 +43,12 @@ export default function Teams() {
       {/* Season Banner */}
       <div className="mb-6 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/20 px-5 py-3 flex items-center gap-3">
         <span className="text-indigo-400 text-lg">📅</span>
-        <span className="text-sm font-semibold text-indigo-300">Season: Current (2025/26)</span>
+        <span className="text-sm font-semibold text-indigo-300">Current Season 2025/26</span>
       </div>
 
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-white">Teams</h1>
-        <p className="text-slate-400 mt-1">EFL League Two &middot; {teams.length} teams</p>
+        <p className="text-slate-400 mt-1">EFL League Two &middot; Current Season 2025/26 &middot; {teams.length} teams</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -55,13 +60,20 @@ export default function Teams() {
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-sm border border-indigo-500/30">
-                    {team.position}
-                  </div>
+                  {team.logo ? (
+                    <img src={team.logo} alt={team.name} className="w-10 h-10 rounded-full object-cover border border-slate-700" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs border border-indigo-500/30">
+                      {getTeamInitials(team.name)}
+                    </div>
+                  )}
                   <div>
                     <h3 className="font-semibold text-white">{team.name}</h3>
                     <p className="text-xs text-slate-500">{team.league}</p>
                   </div>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-sm border border-indigo-500/30">
+                  {team.position}
                 </div>
               </div>
 
@@ -93,7 +105,7 @@ export default function Teams() {
               <div className="mt-2 glass rounded-xl p-5 space-y-4">
                 {/* Team Stats */}
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-300 mb-2">Team Stats</h4>
+                  <h4 className="text-sm font-semibold text-slate-300 mb-2">Team Stats — 2025/26</h4>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-slate-800/50 rounded-lg p-3 text-center">
                       <p className="text-lg font-bold text-indigo-400">{team.avgXG?.toFixed(2) ?? '—'}</p>
@@ -117,20 +129,27 @@ export default function Teams() {
                 {/* Squad */}
                 {team.squad && team.squad.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-300 mb-2">Squad</h4>
+                    <h4 className="text-sm font-semibold text-slate-300 mb-2">Squad — Current Season</h4>
                     <div className="space-y-1">
                       {team.squad.map((p) => (
-                        <div key={p.id} className="flex items-center justify-between bg-slate-800/30 rounded-lg px-3 py-2">
-                          <div>
+                        <Link
+                          key={p.id}
+                          to={`/player/${p.id}`}
+                          className="flex items-center justify-between bg-slate-800/30 rounded-lg px-3 py-2 hover:bg-slate-700/40 transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full gradient-accent-subtle flex items-center justify-center text-indigo-300 text-xs font-bold border border-indigo-500/20">
+                              {p.name.split(' ').map(n => n[0]).join('')}
+                            </div>
                             <span className="text-sm text-white">{p.name}</span>
-                            <span className="text-xs text-slate-500 ml-2">{p.position}</span>
+                            <span className="text-xs text-slate-500">{p.position}</span>
                           </div>
                           <div className="flex gap-3 text-xs text-slate-400">
                             <span>{p.appearances} apps</span>
                             <span className="text-emerald-400">{p.goals}G</span>
                             <span className="text-blue-400">{p.assists}A</span>
                           </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   </div>

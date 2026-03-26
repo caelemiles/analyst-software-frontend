@@ -5,6 +5,7 @@ import PlayerProfile from './pages/PlayerProfile';
 import Portfolio from './pages/Portfolio';
 import Teams from './pages/Teams';
 import Leagues from './pages/Leagues';
+import PlayerStatsTable from './pages/PlayerStatsTable';
 
 export function AppRoutes() {
   return (
@@ -18,6 +19,7 @@ export function AppRoutes() {
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/teams" element={<Teams />} />
             <Route path="/leagues" element={<Leagues />} />
+            <Route path="/stats" element={<PlayerStatsTable />} />
           </Routes>
         </div>
       </main>

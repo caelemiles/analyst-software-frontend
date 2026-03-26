@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 const navItems = [
   { label: 'Dashboard', icon: '📊', path: '/' },
   { label: 'Players', icon: '👤', path: '/' },
+  { label: 'Stats Table', icon: '📈', path: '/stats' },
   { label: 'Teams', icon: '🏟️', path: '/teams' },
   { label: 'Leagues', icon: '🏆', path: '/leagues' },
   { label: 'Portfolio', icon: '📋', path: '/portfolio' },

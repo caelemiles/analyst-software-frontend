@@ -6,6 +6,7 @@ import Dashboard from './Dashboard';
 
 vi.mock('../api/client', () => ({
   fetchPlayers: vi.fn(),
+  fetchPlayersPaginated: vi.fn(),
 }));
 
 vi.mock('../api/mockData', () => {
@@ -30,7 +31,8 @@ vi.mock('../api/mockData', () => {
 });
 
 beforeEach(async () => {
-  const { fetchPlayers } = await import('../api/client');
+  const { fetchPlayers, fetchPlayersPaginated } = await import('../api/client');
+  (fetchPlayersPaginated as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
   (fetchPlayers as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
 });
 
@@ -42,47 +44,44 @@ function renderDashboard() {
   );
 }
 
-describe('Dashboard pagination', () => {
+describe('Dashboard', () => {
   it('shows Current Season 2025/26 label', async () => {
     renderDashboard();
-    expect(await screen.findByText(/Current Season 2025\/26/)).toBeInTheDocument();
+    const labels = await screen.findAllByText(/Current Season 2025\/26/);
+    expect(labels.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows only 10 players on first page', async () => {
+  it('shows all players without pagination', async () => {
     renderDashboard();
-    await screen.findByText('Player 1');
-    const playerCards = screen.getAllByText(/^Player \d+$/);
-    expect(playerCards.length).toBe(10);
-    expect(screen.getByText('Player 1')).toBeInTheDocument();
-    expect(screen.getByText('Player 10')).toBeInTheDocument();
-    expect(screen.queryByText('Player 11')).not.toBeInTheDocument();
+    await screen.findByText('EFL League Two Players');
+    // Count h3 headings matching player names (player cards use h3)
+    const headings = screen.getAllByRole('heading', { level: 3 });
+    const playerHeadings = headings.filter(h => /^Player \d+$/.test(h.textContent ?? ''));
+    expect(playerHeadings.length).toBe(15);
   });
 
-  it('shows pagination controls when more than 10 players', async () => {
+  it('does not show pagination controls', async () => {
     renderDashboard();
-    await screen.findByText('Player 1');
-    expect(screen.getByText(/Page 1 of 2/)).toBeInTheDocument();
-    expect(screen.getByText('← Previous')).toBeDisabled();
-    expect(screen.getByText('Next →')).not.toBeDisabled();
+    await screen.findByText('EFL League Two Players');
+    expect(screen.queryByText(/Page \d+ of \d+/)).not.toBeInTheDocument();
+    expect(screen.queryByText('← Previous')).not.toBeInTheDocument();
+    expect(screen.queryByText('Next →')).not.toBeInTheDocument();
   });
 
-  it('navigates to next page', async () => {
+  it('filters by team', async () => {
     const user = userEvent.setup();
     renderDashboard();
-    await screen.findByText('Player 1');
-    await user.click(screen.getByText('Next →'));
-    expect(screen.getByText('Player 11')).toBeInTheDocument();
-    expect(screen.queryByText('Player 1')).not.toBeInTheDocument();
-    expect(screen.getByText(/Page 2 of 2/)).toBeInTheDocument();
-  });
-
-  it('resets page on filter change', async () => {
-    const user = userEvent.setup();
-    renderDashboard();
-    await screen.findByText('Player 1');
-    await user.click(screen.getByText('Next →'));
-    expect(screen.getByText(/Page 2 of 2/)).toBeInTheDocument();
+    await screen.findByText('EFL League Two Players');
     await user.selectOptions(screen.getByLabelText('Team'), 'Team A');
-    expect(screen.getByText('Player 1')).toBeInTheDocument();
+    const headings = screen.getAllByRole('heading', { level: 3 });
+    const playerHeadings = headings.filter(h => /^Player \d+$/.test(h.textContent ?? ''));
+    expect(playerHeadings.length).toBe(5);
+  });
+
+  it('shows season highlights summary', async () => {
+    renderDashboard();
+    await screen.findByText('EFL League Two Players');
+    expect(screen.getByText('Total Goals')).toBeInTheDocument();
+    expect(screen.getByText('Total Assists')).toBeInTheDocument();
   });
 });

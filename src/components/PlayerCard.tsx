@@ -5,16 +5,36 @@ interface PlayerCardProps {
   player: Player;
 }
 
+function getInitials(name: string): string {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase();
+}
+
 export default function PlayerCard({ player }: PlayerCardProps) {
+  const goalHighlights = player.highlights?.filter(h => h.event_type === 'goal').length ?? 0;
+  const assistHighlights = player.highlights?.filter(h => h.event_type === 'assist').length ?? 0;
+
   return (
     <Link
       to={`/player/${player.id}`}
       className="block rounded-xl glass card-hover p-5"
     >
       <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-white">{player.name}</h3>
-          <p className="text-sm text-slate-400">{player.team}</p>
+        <div className="flex items-center gap-3">
+          {player.image_url ? (
+            <img
+              src={player.image_url}
+              alt={player.name}
+              className="w-12 h-12 rounded-full object-cover border-2 border-indigo-500/30"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full gradient-accent flex items-center justify-center text-white font-bold text-sm border-2 border-indigo-500/30">
+              {getInitials(player.name)}
+            </div>
+          )}
+          <div>
+            <h3 className="text-lg font-semibold text-white">{player.name}</h3>
+            <p className="text-sm text-slate-400">{player.team}</p>
+          </div>
         </div>
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
           {player.position}
@@ -48,6 +68,22 @@ export default function PlayerCard({ player }: PlayerCardProps) {
           <p className="text-xs text-slate-500">xA</p>
         </div>
       </div>
+      {/* Season Highlights Summary */}
+      {(goalHighlights > 0 || assistHighlights > 0) && (
+        <div className="mt-3 flex items-center gap-2 text-xs">
+          {goalHighlights > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              ⚽ {goalHighlights}
+            </span>
+          )}
+          {assistHighlights > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              🎯 {assistHighlights}
+            </span>
+          )}
+          <span className="text-slate-600 ml-auto">This season</span>
+        </div>
+      )}
       <div className="mt-3 flex justify-between text-xs text-slate-500">
         <span>Age: {player.age}</span>
         <span>{player.nationality}</span>

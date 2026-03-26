@@ -7,14 +7,10 @@ import { fetchPlayers, fetchPlayersPaginated } from '../api/client';
 import { mockPlayers } from '../api/mockData';
 import type { Player, PlayerFilters } from '../types';
 
-const PLAYERS_PER_PAGE = 10;
-
 export default function Dashboard() {
   const navigate = useNavigate();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPlayers, setTotalPlayers] = useState(0);
   const [filters, setFilters] = useState<PlayerFilters>({
     search: '',
     team: '',
@@ -26,27 +22,24 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadPlayers() {
       try {
-        // Try paginated API first
-        const data = await fetchPlayersPaginated('EFL-League-Two', currentPage, PLAYERS_PER_PAGE);
+        // Try paginated API first — fetch all players
+        const data = await fetchPlayersPaginated('EFL-League-Two', 1, 1000);
         setPlayers(data.players);
-        setTotalPlayers(data.total);
       } catch {
         try {
           // Fall back to unpaginated API
           const data = await fetchPlayers();
           setPlayers(data);
-          setTotalPlayers(data.length);
         } catch {
           // Fall back to mock data
           setPlayers(mockPlayers);
-          setTotalPlayers(mockPlayers.length);
         }
       } finally {
         setLoading(false);
       }
     }
     loadPlayers();
-  }, [currentPage]);
+  }, []);
 
   const teams = useMemo(
     () => [...new Set(players.map((p) => p.team))].sort(),
@@ -74,20 +67,21 @@ export default function Dashboard() {
     });
   }, [players, filters]);
 
-  const totalPages = Math.max(1, Math.ceil(
-    totalPlayers > players.length ? totalPlayers / PLAYERS_PER_PAGE : filteredPlayers.length / PLAYERS_PER_PAGE
-  ));
-
-  const paginatedPlayers = useMemo(() => {
-    // If using server pagination (totalPlayers > current page), show all filtered
-    if (totalPlayers > players.length) return filteredPlayers;
-    const start = (currentPage - 1) * PLAYERS_PER_PAGE;
-    return filteredPlayers.slice(start, start + PLAYERS_PER_PAGE);
-  }, [filteredPlayers, currentPage, totalPlayers, players.length]);
+  // Compute season highlights summary
+  const seasonHighlights = useMemo(() => {
+    let totalGoals = 0;
+    let totalAssists = 0;
+    for (const p of players) {
+      totalGoals += p.stats.goals;
+      totalAssists += p.stats.assists;
+    }
+    const topScorer = [...players].sort((a, b) => b.stats.goals - a.stats.goals)[0];
+    const topAssister = [...players].sort((a, b) => b.stats.assists - a.stats.assists)[0];
+    return { totalGoals, totalAssists, topScorer, topAssister };
+  }, [players]);
 
   const handleFilterChange = (newFilters: PlayerFilters) => {
     setFilters(newFilters);
-    setCurrentPage(1);
   };
 
   if (loading) {
@@ -106,15 +100,55 @@ export default function Dashboard() {
       {/* Season Banner */}
       <div className="mb-6 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/20 px-5 py-3 flex items-center gap-3">
         <span className="text-indigo-400 text-lg">📅</span>
-        <span className="text-sm font-semibold text-indigo-300">Season: Current (2025/26)</span>
+        <span className="text-sm font-semibold text-indigo-300">Current Season 2025/26</span>
         <span className="text-slate-500 text-sm ml-2">• All stats from current season only</span>
       </div>
+
+      {/* Season Highlights Summary */}
+      {players.length > 0 && (
+        <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="glass rounded-xl p-4 text-center">
+            <p className="text-2xl font-bold text-emerald-400">{seasonHighlights.totalGoals}</p>
+            <p className="text-xs text-slate-500 mt-1">Total Goals</p>
+          </div>
+          <div className="glass rounded-xl p-4 text-center">
+            <p className="text-2xl font-bold text-blue-400">{seasonHighlights.totalAssists}</p>
+            <p className="text-xs text-slate-500 mt-1">Total Assists</p>
+          </div>
+          <div className="glass rounded-xl p-4 text-center">
+            {seasonHighlights.topScorer && (
+              <>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-8 h-8 rounded-full gradient-accent flex items-center justify-center text-white text-xs font-bold">
+                    {seasonHighlights.topScorer.name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                  <p className="text-sm font-bold text-white">{seasonHighlights.topScorer.name}</p>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">⚽ Top Scorer ({seasonHighlights.topScorer.stats.goals} goals)</p>
+              </>
+            )}
+          </div>
+          <div className="glass rounded-xl p-4 text-center">
+            {seasonHighlights.topAssister && (
+              <>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-8 h-8 rounded-full gradient-accent flex items-center justify-center text-white text-xs font-bold">
+                    {seasonHighlights.topAssister.name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                  <p className="text-sm font-bold text-white">{seasonHighlights.topAssister.name}</p>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">🎯 Top Assists ({seasonHighlights.topAssister.stats.assists} assists)</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white">EFL League Two Players</h1>
           <p className="text-slate-400 mt-1">
-            Current Season 2025/26 &middot; Browse and scout {totalPlayers || players.length} players across League Two
+            Current Season 2025/26 &middot; Browse and scout {players.length} players across League Two
           </p>
         </div>
         <PlayerSearch
@@ -135,35 +169,11 @@ export default function Dashboard() {
           No players match your filters. Try adjusting your search criteria.
         </div>
       ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {paginatedPlayers.map((player) => (
-              <PlayerCard key={player.id} player={player} />
-            ))}
-          </div>
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-4 mt-6">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-4 py-2 text-sm font-medium rounded-lg glass text-slate-300 hover:text-white hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              >
-                ← Previous
-              </button>
-              <span className="text-sm text-slate-400">
-                Page {currentPage} of {totalPages} ({totalPlayers || filteredPlayers.length} players)
-              </span>
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 text-sm font-medium rounded-lg glass text-slate-300 hover:text-white hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              >
-                Next →
-              </button>
-            </div>
-          )}
-        </>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredPlayers.map((player) => (
+            <PlayerCard key={player.id} player={player} />
+          ))}
+        </div>
       )}
     </div>
   );

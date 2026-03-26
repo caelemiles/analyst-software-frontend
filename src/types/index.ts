@@ -128,4 +128,5 @@ export interface LeagueEntry {
   goalsAgainst: number;
   goalDifference: number;
   points: number;
+  form?: ('W' | 'D' | 'L')[];
 }
