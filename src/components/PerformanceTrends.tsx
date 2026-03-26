@@ -30,6 +30,7 @@ export default function PerformanceTrends({ matchLogs }: PerformanceTrendsProps)
     assists: log.assists,
     xG: log.xG,
     xA: log.xA,
+    rating: log.rating,
   }));
 
   return (
@@ -75,6 +76,14 @@ export default function PerformanceTrends({ matchLogs }: PerformanceTrendsProps)
             strokeWidth={2}
             strokeDasharray="5 5"
             dot={{ r: 3 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="rating"
+            stroke="#f59e0b"
+            name="Rating"
+            strokeWidth={2}
+            dot={{ r: 4 }}
           />
         </LineChart>
       </ResponsiveContainer>

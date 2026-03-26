@@ -45,6 +45,8 @@ export interface Highlight {
   title: string;
   url: string;
   date: string;
+  event_type?: 'goal' | 'assist' | 'save' | 'tackle' | 'other';
+  minute?: number;
 }
 
 export interface PlayerFilters {

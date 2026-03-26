@@ -31,8 +31,8 @@ export const mockPlayers: Player[] = [
       fouls_committed: 22,
     },
     highlights: [
-      { id: 'h1', title: 'Goal vs Swindon Town', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-11-15' },
-      { id: 'h2', title: 'Assist vs Gillingham', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-12-02' },
+      { id: 'h1', title: 'Goal vs Swindon Town', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-11-15', event_type: 'goal', minute: 23 },
+      { id: 'h2', title: 'Assist vs Gillingham', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-12-02', event_type: 'assist', minute: 45 },
     ],
     notes: '',
     ai_summary: 'Clinical finisher with strong movement off the ball. Consistently outperforms xG metrics. Good link-up play with midfielders.',
@@ -74,7 +74,7 @@ export const mockPlayers: Player[] = [
       fouls_committed: 32,
     },
     highlights: [
-      { id: 'h3', title: 'Defensive Masterclass vs Barrow', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-10-20' },
+      { id: 'h3', title: 'Defensive Masterclass vs Barrow', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-10-20', event_type: 'tackle', minute: 67 },
     ],
     notes: '',
     ai_summary: 'Commanding centre-back with excellent aerial ability. Strong in the tackle and reads the game well. Good distribution from the back.',
@@ -116,8 +116,8 @@ export const mockPlayers: Player[] = [
       fouls_committed: 25,
     },
     highlights: [
-      { id: 'h4', title: 'Long Range Goal vs Doncaster', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-09-14' },
-      { id: 'h5', title: 'Playmaking Display vs Grimsby', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-11-28' },
+      { id: 'h4', title: 'Long Range Goal vs Doncaster', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-09-14', event_type: 'goal', minute: 34 },
+      { id: 'h5', title: 'Playmaking Display vs Grimsby', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-11-28', event_type: 'assist', minute: 52 },
     ],
     notes: '',
     ai_summary: 'Creative midfielder with excellent vision and passing range. Capable of scoring from distance. Strong work rate off the ball.',
@@ -159,7 +159,7 @@ export const mockPlayers: Player[] = [
       fouls_committed: 35,
     },
     highlights: [
-      { id: 'h6', title: 'Recovery Tackle vs Accrington', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-12-10' },
+      { id: 'h6', title: 'Recovery Tackle vs Accrington', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-12-10', event_type: 'tackle', minute: 78 },
     ],
     notes: '',
     ai_summary: 'Athletic right-back with pace and good defensive instincts. Developing his attacking output. Strong one-on-one defender.',
@@ -201,8 +201,8 @@ export const mockPlayers: Player[] = [
       fouls_committed: 18,
     },
     highlights: [
-      { id: 'h7', title: 'Hat-trick vs Walsall', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-10-05' },
-      { id: 'h8', title: 'Winning Goal vs Bradford City', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-11-22' },
+      { id: 'h7', title: 'Hat-trick vs Walsall', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-10-05', event_type: 'goal', minute: 15 },
+      { id: 'h8', title: 'Winning Goal vs Bradford City', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-11-22', event_type: 'goal', minute: 88 },
     ],
     notes: '',
     ai_summary: 'Prolific goalscorer with strong positioning and finishing. Experienced at League Two level. Reliable penalty taker.',
@@ -244,7 +244,7 @@ export const mockPlayers: Player[] = [
       fouls_committed: 28,
     },
     highlights: [
-      { id: 'h9', title: 'Box-to-Box Display vs Newport', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-09-28' },
+      { id: 'h9', title: 'Box-to-Box Display vs Newport', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-09-28', event_type: 'other', minute: 40 },
     ],
     notes: '',
     ai_summary: 'Energetic box-to-box midfielder with good passing and tackling. Provides balance between attack and defense. Consistent performer.',
@@ -286,7 +286,7 @@ export const mockPlayers: Player[] = [
       fouls_committed: 15,
     },
     highlights: [
-      { id: 'h10', title: 'Solo Goal vs Salford City', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-10-18' },
+      { id: 'h10', title: 'Solo Goal vs Salford City', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-10-18', event_type: 'goal', minute: 61 },
     ],
     notes: '',
     ai_summary: 'Tricky winger with excellent dribbling and crossing ability. Creates chances consistently. Developing his end product.',
@@ -328,7 +328,7 @@ export const mockPlayers: Player[] = [
       fouls_committed: 30,
     },
     highlights: [
-      { id: 'h11', title: 'Overlapping Run Goal vs Tranmere', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-11-08' },
+      { id: 'h11', title: 'Overlapping Run Goal vs Tranmere', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-11-08', event_type: 'goal', minute: 72 },
     ],
     notes: '',
     ai_summary: 'Attack-minded full-back with pace and crossing ability. Defensively solid and positionally aware. Good stamina for overlap runs.',
@@ -370,7 +370,7 @@ export const mockPlayers: Player[] = [
       fouls_committed: 20,
     },
     highlights: [
-      { id: 'h12', title: 'Free Kick Goal vs Crewe', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-10-25' },
+      { id: 'h12', title: 'Free Kick Goal vs Crewe', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-10-25', event_type: 'goal', minute: 55 },
     ],
     notes: '',
     ai_summary: 'Experienced midfielder with excellent set-piece delivery. Strong leadership qualities. Good range of passing and game management.',
@@ -412,8 +412,8 @@ export const mockPlayers: Player[] = [
       fouls_committed: 16,
     },
     highlights: [
-      { id: 'h13', title: 'Brace vs Mansfield Town', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-12-06' },
-      { id: 'h14', title: 'Overhead Kick vs Stockport', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-09-20' },
+      { id: 'h13', title: 'Brace vs Mansfield Town', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-12-06', event_type: 'goal', minute: 29 },
+      { id: 'h14', title: 'Overhead Kick vs Stockport', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-09-20', event_type: 'goal', minute: 43 },
     ],
     notes: '',
     ai_summary: 'Natural goalscorer with predatory instincts in the box. Good aerial ability for his size. Proven at this level with impressive goal record.',
