@@ -48,6 +48,13 @@ export default function Portfolio() {
   const handleExportCSV = () => {
     if (selectedIds.size === 0) return;
     const selected = players.filter((p) => selectedIds.has(p.id));
+    const escapeCSV = (val: string | number) => {
+      const str = String(val);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
     const headers = ['Name', 'Team', 'Position', 'Age', 'Appearances', 'Goals', 'Assists', 'xG', 'xA', 'Pass Accuracy', 'Tackles', 'Rating'];
     const rows = selected.map((p) => [
       p.name,
@@ -63,7 +70,7 @@ export default function Portfolio() {
       p.stats.tackles,
       p.stats.rating.toFixed(1),
     ]);
-    const csvContent = [headers, ...rows].map((row) => row.join(',')).join('\n');
+    const csvContent = [headers, ...rows].map((row) => row.map(escapeCSV).join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

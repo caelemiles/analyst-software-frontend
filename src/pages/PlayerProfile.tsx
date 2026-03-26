@@ -83,6 +83,7 @@ export default function PlayerProfile() {
 
   const initials = player.name
     .split(' ')
+    .filter((n) => n.length > 0)
     .map((n) => n[0])
     .join('')
     .slice(0, 2)
