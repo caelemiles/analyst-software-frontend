@@ -24,7 +24,7 @@ export default function HighlightsSection({ highlights }: HighlightsSectionProps
               className="w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
-              sandbox="allow-scripts allow-same-origin allow-presentation"
+              sandbox="allow-scripts allow-presentation"
             />
           </div>
           <div className="p-4">

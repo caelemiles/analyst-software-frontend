@@ -26,6 +26,6 @@ describe('HighlightsSection', () => {
     ];
     const { container } = render(<HighlightsSection highlights={highlights} />);
     const iframe = container.querySelector('iframe');
-    expect(iframe).toHaveAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation');
+    expect(iframe).toHaveAttribute('sandbox', 'allow-scripts allow-presentation');
   });
 });
