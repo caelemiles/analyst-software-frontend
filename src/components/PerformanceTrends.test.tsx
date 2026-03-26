@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import PerformanceTrends from '../components/PerformanceTrends';
 import type { MatchLog } from '../types';
 
