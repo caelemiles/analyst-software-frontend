@@ -1,28 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import StatsCharts from '../components/StatsCharts';
+import StatsTable from '../components/StatsTable';
+import Per90MetricsTable from '../components/Per90MetricsTable';
 import HighlightsSection from '../components/HighlightsSection';
-import NotesSection from '../components/NotesSection';
 import AIInsightsCard from '../components/AIInsightsCard';
 import DefensiveRadar from '../components/DefensiveRadar';
-import DisciplinePanel from '../components/DisciplinePanel';
+import OffensiveRadar from '../components/OffensiveRadar';
 import PerformanceTrends from '../components/PerformanceTrends';
 import ShotHeatmap from '../components/ShotHeatmap';
 import { fetchPlayer } from '../api/client';
 import { mockPlayers } from '../api/mockData';
-import { getPlayerPer90Stats } from '../utils/per90';
 import type { Player } from '../types';
-import {
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  ResponsiveContainer,
-  Tooltip,
-} from 'recharts';
 
-type Tab = 'overview' | 'attacking' | 'defensive' | 'trends' | 'heatmap' | 'notes';
+type Tab = 'overview' | 'stats' | 'per90' | 'radar' | 'heatmap' | 'trends' | 'highlights' | 'ai';
 
 function OverviewStatBox({ label, value }: { label: string; value: string | number }) {
   return (
@@ -79,8 +69,6 @@ export default function PlayerProfile() {
     );
   }
 
-  const per90 = getPlayerPer90Stats(player.stats);
-
   const initials = player.name
     .split(' ')
     .filter((n) => n.length > 0)
@@ -96,13 +84,15 @@ export default function PlayerProfile() {
         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
     }`;
 
-  const attackingRadarData = [
-    { metric: 'Goals p90', value: per90.goalsPer90 },
-    { metric: 'Assists p90', value: per90.assistsPer90 },
-    { metric: 'xG p90', value: per90.xGPer90 },
-    { metric: 'xA p90', value: per90.xAPer90 },
-    { metric: 'Key Passes p90', value: per90.keyPassesPer90 },
-    { metric: 'Dribbles p90', value: per90.dribblesPer90 },
+  const tabs: { key: Tab; label: string; icon: string }[] = [
+    { key: 'overview', label: 'Overview', icon: '📊' },
+    { key: 'stats', label: 'Stats', icon: '⚽' },
+    { key: 'per90', label: 'Per-90 Metrics', icon: '📐' },
+    { key: 'radar', label: 'Radar', icon: '🎯' },
+    { key: 'heatmap', label: 'Heatmap', icon: '🗺️' },
+    { key: 'trends', label: 'Trend Graphs', icon: '📈' },
+    { key: 'highlights', label: 'Highlights', icon: '🎬' },
+    { key: 'ai', label: 'AI Insights', icon: '✨' },
   ];
 
   return (
@@ -154,24 +144,15 @@ export default function PlayerProfile() {
       {/* Tab Navigation */}
       <div className="border-b border-gray-200 mb-6">
         <div className="flex flex-wrap gap-1">
-          <button className={tabClass('overview')} onClick={() => setActiveTab('overview')}>
-            📊 Overview
-          </button>
-          <button className={tabClass('attacking')} onClick={() => setActiveTab('attacking')}>
-            ⚽ Attacking
-          </button>
-          <button className={tabClass('defensive')} onClick={() => setActiveTab('defensive')}>
-            🛡️ Defensive
-          </button>
-          <button className={tabClass('trends')} onClick={() => setActiveTab('trends')}>
-            📈 Trends
-          </button>
-          <button className={tabClass('heatmap')} onClick={() => setActiveTab('heatmap')}>
-            🎯 Heatmap
-          </button>
-          <button className={tabClass('notes')} onClick={() => setActiveTab('notes')}>
-            📝 Notes
-          </button>
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              className={tabClass(tab.key)}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -188,59 +169,31 @@ export default function PlayerProfile() {
             <OverviewStatBox label="xA" value={player.stats.xA.toFixed(1)} />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <AIInsightsCard aiSummary={player.ai_summary || ''} playerName={player.name} />
-            <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Per 90 Minutes</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <OverviewStatBox label="Goals p90" value={per90.goalsPer90} />
-                <OverviewStatBox label="Assists p90" value={per90.assistsPer90} />
-                <OverviewStatBox label="xG p90" value={per90.xGPer90} />
-                <OverviewStatBox label="xA p90" value={per90.xAPer90} />
-              </div>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <OverviewStatBox label="Pass Accuracy" value={`${player.stats.pass_accuracy}%`} />
+            <OverviewStatBox label="Passes" value={player.stats.passes_completed.toLocaleString()} />
+            <OverviewStatBox label="Tackles" value={player.stats.tackles} />
+            <OverviewStatBox label="Interceptions" value={player.stats.interceptions} />
           </div>
         </div>
       )}
 
-      {/* Attacking Tab */}
-      {activeTab === 'attacking' && (
-        <div className="space-y-6">
-          <StatsCharts stats={player.stats} position={player.position} />
-          <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Per 90 Attacking Radar
-            </h3>
-            <ResponsiveContainer width="100%" height={350}>
-              <RadarChart data={attackingRadarData}>
-                <PolarGrid />
-                <PolarAngleAxis dataKey="metric" tick={{ fontSize: 12 }} />
-                <PolarRadiusAxis angle={30} domain={[0, 'auto']} />
-                <Tooltip />
-                <Radar
-                  name="Attacking p90"
-                  dataKey="value"
-                  stroke="#4f46e5"
-                  fill="#4f46e5"
-                  fillOpacity={0.3}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+      {/* Stats Tab */}
+      {activeTab === 'stats' && (
+        <StatsTable matchLogs={player.match_logs || []} />
       )}
 
-      {/* Defensive Tab */}
-      {activeTab === 'defensive' && (
-        <div className="space-y-6">
+      {/* Per-90 Metrics Tab */}
+      {activeTab === 'per90' && (
+        <Per90MetricsTable stats={player.stats} />
+      )}
+
+      {/* Radar Tab */}
+      {activeTab === 'radar' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <OffensiveRadar stats={player.stats} />
           <DefensiveRadar stats={player.stats} />
-          <DisciplinePanel stats={player.stats} position={player.position} />
         </div>
-      )}
-
-      {/* Trends Tab */}
-      {activeTab === 'trends' && (
-        <PerformanceTrends matchLogs={player.match_logs || []} />
       )}
 
       {/* Heatmap Tab */}
@@ -248,17 +201,23 @@ export default function PlayerProfile() {
         <ShotHeatmap stats={player.stats} position={player.position} />
       )}
 
-      {/* Notes Tab */}
-      {activeTab === 'notes' && (
-        <div className="space-y-6">
-          <NotesSection
-            playerId={player.id}
-            notes={player.notes || ''}
-            aiSummary={player.ai_summary || ''}
-            onNotesUpdated={(notes) => setPlayer({ ...player, notes })}
-          />
-          <HighlightsSection highlights={player.highlights || []} />
-        </div>
+      {/* Trend Graphs Tab */}
+      {activeTab === 'trends' && (
+        <PerformanceTrends matchLogs={player.match_logs || []} />
+      )}
+
+      {/* Highlights Tab */}
+      {activeTab === 'highlights' && (
+        <HighlightsSection highlights={player.highlights || []} />
+      )}
+
+      {/* AI Insights Tab */}
+      {activeTab === 'ai' && (
+        <AIInsightsCard
+          aiSummary={player.ai_summary || ''}
+          playerName={player.name}
+          matchLogs={player.match_logs}
+        />
       )}
     </div>
   );
