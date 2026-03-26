@@ -34,6 +34,20 @@ export default function PlayerCard({ player }: PlayerCardProps) {
           <p className="text-xs text-gray-500">Apps</p>
         </div>
       </div>
+      <div className="mt-2 grid grid-cols-3 gap-3 text-center">
+        <div>
+          <p className="text-lg font-semibold text-gray-700">{player.stats.minutes_played.toLocaleString()}</p>
+          <p className="text-xs text-gray-500">Minutes</p>
+        </div>
+        <div>
+          <p className="text-lg font-semibold text-gray-700">{player.stats.xG.toFixed(1)}</p>
+          <p className="text-xs text-gray-500">xG</p>
+        </div>
+        <div>
+          <p className="text-lg font-semibold text-gray-700">{player.stats.xA.toFixed(1)}</p>
+          <p className="text-xs text-gray-500">xA</p>
+        </div>
+      </div>
       <div className="mt-3 flex justify-between text-xs text-gray-400">
         <span>Age: {player.age}</span>
         <span>{player.nationality}</span>

@@ -7,10 +7,13 @@ import { fetchPlayers } from '../api/client';
 import { mockPlayers } from '../api/mockData';
 import type { Player, PlayerFilters } from '../types';
 
+const PLAYERS_PER_PAGE = 10;
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<PlayerFilters>({
     search: '',
     team: '',
@@ -59,6 +62,18 @@ export default function Dashboard() {
     });
   }, [players, filters]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredPlayers.length / PLAYERS_PER_PAGE));
+
+  const paginatedPlayers = useMemo(() => {
+    const start = (currentPage - 1) * PLAYERS_PER_PAGE;
+    return filteredPlayers.slice(start, start + PLAYERS_PER_PAGE);
+  }, [filteredPlayers, currentPage]);
+
+  const handleFilterChange = (newFilters: PlayerFilters) => {
+    setFilters(newFilters);
+    setCurrentPage(1);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -73,7 +88,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">EFL League Two Players</h1>
           <p className="text-gray-500 mt-1">
-            Browse and scout {players.length} players across League Two
+            Current Season 2025/26 &middot; Browse and scout {players.length} players across League Two
           </p>
         </div>
         <PlayerSearch
@@ -84,7 +99,7 @@ export default function Dashboard() {
 
       <FilterBar
         filters={filters}
-        onFilterChange={setFilters}
+        onFilterChange={handleFilterChange}
         teams={teams}
         positions={positions}
       />
@@ -94,11 +109,35 @@ export default function Dashboard() {
           No players match your filters. Try adjusting your search criteria.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredPlayers.map((player) => (
-            <PlayerCard key={player.id} player={player} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {paginatedPlayers.map((player) => (
+              <PlayerCard key={player.id} player={player} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-4 mt-6">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 text-sm font-medium rounded-md bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                ← Previous
+              </button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {totalPages} ({filteredPlayers.length} players)
+              </span>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 text-sm font-medium rounded-md bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
