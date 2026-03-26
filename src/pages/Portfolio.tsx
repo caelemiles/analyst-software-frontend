@@ -1,0 +1,208 @@
+import { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { fetchPlayers, exportPortfolio } from '../api/client';
+import { mockPlayers } from '../api/mockData';
+import type { Player } from '../types';
+
+export default function Portfolio() {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    async function loadPlayers() {
+      try {
+        const data = await fetchPlayers();
+        setPlayers(data);
+      } catch {
+        setPlayers(mockPlayers);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPlayers();
+  }, []);
+
+  const togglePlayer = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (selectedIds.size === players.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(players.map((p) => p.id)));
+    }
+  };
+
+  const handleExport = async () => {
+    if (selectedIds.size === 0) return;
+    setExporting(true);
+
+    try {
+      const blob = await exportPortfolio([...selectedIds]);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'scouting-portfolio.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      generateLocalPdf();
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const generateLocalPdf = () => {
+    const selected = players.filter((p) => selectedIds.has(p.id));
+    const doc = new jsPDF();
+
+    doc.setFontSize(20);
+    doc.text('EFL League Two Scouting Portfolio', 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+    doc.text(`Players: ${selected.length}`, 14, 36);
+
+    let yPos = 45;
+
+    selected.forEach((player, index) => {
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(14);
+      doc.text(`${index + 1}. ${player.name}`, 14, yPos);
+      yPos += 7;
+      doc.setFontSize(10);
+      doc.text(`Team: ${player.team} | Position: ${player.position} | Age: ${player.age}`, 14, yPos);
+      yPos += 7;
+
+      if (player.ai_summary) {
+        doc.setFontSize(9);
+        const summaryLines = doc.splitTextToSize(`AI Summary: ${player.ai_summary}`, 180);
+        doc.text(summaryLines, 14, yPos);
+        yPos += summaryLines.length * 5 + 3;
+      }
+
+      if (player.notes) {
+        doc.setFontSize(9);
+        const notesLines = doc.splitTextToSize(`Notes: ${player.notes}`, 180);
+        doc.text(notesLines, 14, yPos);
+        yPos += notesLines.length * 5 + 3;
+      }
+
+      yPos += 5;
+    });
+
+    doc.addPage();
+    doc.setFontSize(14);
+    doc.text('Player Comparison', 14, 20);
+
+    autoTable(doc, {
+      startY: 30,
+      head: [['Player', 'Team', 'Pos', 'Age', 'Apps', 'Goals', 'Assists', 'xG', 'xA', 'Pass %']],
+      body: selected.map((p) => [
+        p.name,
+        p.team,
+        p.position,
+        p.age,
+        p.stats.appearances,
+        p.stats.goals,
+        p.stats.assists,
+        p.stats.xG,
+        p.stats.xA,
+        `${p.stats.pass_accuracy}%`,
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [79, 70, 229] },
+    });
+
+    doc.save('scouting-portfolio.pdf');
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-lg text-gray-500">Loading players...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Scouting Portfolio</h1>
+          <p className="text-gray-500 mt-1">
+            Select players to include in your scouting report
+          </p>
+        </div>
+        <div className="mt-4 sm:mt-0 flex items-center gap-3">
+          <span className="text-sm text-gray-500">
+            {selectedIds.size} player{selectedIds.size !== 1 ? 's' : ''} selected
+          </span>
+          <button
+            onClick={handleExport}
+            disabled={selectedIds.size === 0 || exporting}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {exporting ? 'Exporting...' : '📄 Export PDF'}
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="px-4 py-3 bg-gray-50 border-b flex items-center">
+          <label className="flex items-center text-sm text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selectedIds.size === players.length && players.length > 0}
+              onChange={selectAll}
+              className="mr-2 h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+            />
+            Select All
+          </label>
+        </div>
+        <ul className="divide-y divide-gray-200">
+          {players.map((player) => (
+            <li key={player.id} className="px-4 py-3 hover:bg-gray-50 transition-colors">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(player.id)}
+                  onChange={() => togglePlayer(player.id)}
+                  className="mr-3 h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                />
+                <div className="flex-1 flex items-center justify-between">
+                  <div>
+                    <span className="font-medium text-gray-900">{player.name}</span>
+                    <span className="ml-2 text-sm text-gray-500">{player.team}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-gray-500">
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-xs font-medium">
+                      {player.position}
+                    </span>
+                    <span>Age {player.age}</span>
+                    <span>{player.stats.goals}G {player.stats.assists}A</span>
+                  </div>
+                </div>
+              </label>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
