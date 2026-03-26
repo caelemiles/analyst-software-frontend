@@ -16,9 +16,9 @@ type Tab = 'overview' | 'stats' | 'per90' | 'radar' | 'heatmap' | 'trends' | 'hi
 
 function OverviewStatBox({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-white rounded-lg shadow p-4 text-center">
-      <p className="text-2xl font-bold text-indigo-600">{value}</p>
-      <p className="text-sm text-gray-500">{label}</p>
+    <div className="glass rounded-xl p-4 text-center">
+      <p className="text-2xl font-bold text-indigo-400">{value}</p>
+      <p className="text-sm text-slate-400">{label}</p>
     </div>
   );
 }
@@ -53,7 +53,10 @@ export default function PlayerProfile() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-lg text-gray-500">Loading player profile...</div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <div className="text-lg text-slate-400">Loading player profile...</div>
+        </div>
       </div>
     );
   }
@@ -61,8 +64,8 @@ export default function PlayerProfile() {
   if (error || !player) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-500 text-lg">{error || 'Player not found'}</p>
-        <Link to="/" className="text-indigo-600 hover:text-indigo-800 mt-4 inline-block">
+        <p className="text-red-400 text-lg">{error || 'Player not found'}</p>
+        <Link to="/" className="text-indigo-400 hover:text-indigo-300 mt-4 inline-block">
           ← Back to Dashboard
         </Link>
       </div>
@@ -78,10 +81,10 @@ export default function PlayerProfile() {
     .toUpperCase();
 
   const tabClass = (tab: Tab) =>
-    `px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+    `px-4 py-2 text-sm font-medium rounded-t-lg transition-all ${
       activeTab === tab
-        ? 'bg-white text-indigo-600 border-b-2 border-indigo-600'
-        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+        ? 'bg-slate-800 text-indigo-400 border-b-2 border-indigo-500'
+        : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
     }`;
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
@@ -97,44 +100,44 @@ export default function PlayerProfile() {
 
   return (
     <div>
-      <Link to="/" className="text-indigo-600 hover:text-indigo-800 text-sm mb-4 inline-block">
+      <Link to="/" className="text-indigo-400 hover:text-indigo-300 text-sm mb-4 inline-block">
         ← Back to Dashboard
       </Link>
 
       {/* Header */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
+      <div className="glass rounded-xl p-6 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             {player.image_url ? (
               <img
                 src={player.image_url}
                 alt={player.name}
-                className="w-16 h-16 rounded-full object-cover border-2 border-indigo-200"
+                className="w-16 h-16 rounded-full object-cover border-2 border-indigo-500/50"
               />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xl border-2 border-indigo-200">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl">
                 {initials}
               </div>
             )}
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{player.name}</h1>
+              <h1 className="text-3xl font-bold text-white">{player.name}</h1>
               <div className="mt-2 flex flex-wrap gap-2">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                   {player.position}
                 </span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-slate-700/50 text-slate-300 border border-slate-600/50">
                   {player.team}
                 </span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-slate-700/50 text-slate-400 border border-slate-600/50">
                   Age: {player.age}
                 </span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-slate-700/50 text-slate-400 border border-slate-600/50">
                   {player.nationality}
                 </span>
               </div>
             </div>
           </div>
-          <div className="mt-4 sm:mt-0 flex items-center gap-1 text-lg font-semibold text-yellow-500">
+          <div className="mt-4 sm:mt-0 flex items-center gap-1 text-lg font-semibold text-amber-400">
             <span>⭐</span>
             <span>{player.stats.rating.toFixed(1)}</span>
           </div>
@@ -142,7 +145,7 @@ export default function PlayerProfile() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b border-gray-200 mb-6">
+      <div className="border-b border-slate-700/50 mb-6">
         <div className="flex flex-wrap gap-1">
           {tabs.map((tab) => (
             <button
