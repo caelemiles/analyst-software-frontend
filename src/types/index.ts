@@ -78,3 +78,54 @@ export interface MatchLog {
   tackles: number;
   interceptions: number;
 }
+
+export interface PaginatedPlayersResponse {
+  players: Player[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface Team {
+  id: number;
+  name: string;
+  logo?: string;
+  league: string;
+  position: number;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  points: number;
+  avgXG?: number;
+  avgPossession?: number;
+  squad?: TeamPlayer[];
+}
+
+export interface TeamPlayer {
+  id: number;
+  name: string;
+  position: string;
+  age: number;
+  nationality: string;
+  appearances: number;
+  goals: number;
+  assists: number;
+}
+
+export interface LeagueEntry {
+  position: number;
+  team: string;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  points: number;
+}

@@ -1,4 +1,4 @@
-import type { Player } from '../types';
+import type { Player, Team, LeagueEntry } from '../types';
 
 export const mockPlayers: Player[] = [
   {
@@ -458,3 +458,43 @@ export const mockPlayers: Player[] = [
     ],
   },
 ];
+
+export const mockTeams: Team[] = [
+  { id: 1, name: 'Barrow', league: 'EFL League Two', position: 1, played: 34, won: 20, drawn: 8, lost: 6, goalsFor: 52, goalsAgainst: 28, goalDifference: 24, points: 68, avgXG: 1.42, avgPossession: 52.1, squad: [{ id: 101, name: 'Billy Waters', position: 'Forward', age: 28, nationality: 'England', appearances: 33, goals: 12, assists: 5 }, { id: 102, name: 'Sam Foley', position: 'Midfielder', age: 30, nationality: 'Ireland', appearances: 32, goals: 3, assists: 7 }, { id: 103, name: 'Jason Taylor', position: 'Defender', age: 26, nationality: 'England', appearances: 34, goals: 1, assists: 2 }] },
+  { id: 2, name: 'Crawley Town', league: 'EFL League Two', position: 2, played: 34, won: 19, drawn: 9, lost: 6, goalsFor: 55, goalsAgainst: 30, goalDifference: 25, points: 66, avgXG: 1.53, avgPossession: 54.3, squad: [{ id: 1, name: 'James Collins', position: 'Forward', age: 24, nationality: 'England', appearances: 32, goals: 14, assists: 6 }, { id: 104, name: 'Jack Powell', position: 'Midfielder', age: 27, nationality: 'Wales', appearances: 30, goals: 4, assists: 8 }] },
+  { id: 3, name: 'Gillingham', league: 'EFL League Two', position: 3, played: 34, won: 18, drawn: 10, lost: 6, goalsFor: 48, goalsAgainst: 26, goalDifference: 22, points: 64, avgXG: 1.35, avgPossession: 51.8 },
+  { id: 4, name: 'Doncaster Rovers', league: 'EFL League Two', position: 4, played: 34, won: 18, drawn: 7, lost: 9, goalsFor: 50, goalsAgainst: 34, goalDifference: 16, points: 61, avgXG: 1.44, avgPossession: 50.2 },
+  { id: 5, name: 'Wrexham', league: 'EFL League Two', position: 5, played: 34, won: 17, drawn: 8, lost: 9, goalsFor: 46, goalsAgainst: 31, goalDifference: 15, points: 59, avgXG: 1.30, avgPossession: 53.5 },
+  { id: 6, name: 'Walsall', league: 'EFL League Two', position: 6, played: 34, won: 16, drawn: 10, lost: 8, goalsFor: 44, goalsAgainst: 32, goalDifference: 12, points: 58, avgXG: 1.25, avgPossession: 49.7 },
+  { id: 7, name: 'Swindon Town', league: 'EFL League Two', position: 7, played: 34, won: 16, drawn: 9, lost: 9, goalsFor: 47, goalsAgainst: 35, goalDifference: 12, points: 57, avgXG: 1.38, avgPossession: 48.9 },
+  { id: 8, name: 'Bradford City', league: 'EFL League Two', position: 8, played: 34, won: 15, drawn: 10, lost: 9, goalsFor: 42, goalsAgainst: 30, goalDifference: 12, points: 55, avgXG: 1.22, avgPossession: 50.5 },
+  { id: 9, name: 'Stockport County', league: 'EFL League Two', position: 9, played: 34, won: 15, drawn: 9, lost: 10, goalsFor: 45, goalsAgainst: 37, goalDifference: 8, points: 54, avgXG: 1.31, avgPossession: 52.0 },
+  { id: 10, name: 'Newport County', league: 'EFL League Two', position: 10, played: 34, won: 14, drawn: 10, lost: 10, goalsFor: 40, goalsAgainst: 33, goalDifference: 7, points: 52, avgXG: 1.18, avgPossession: 47.6 },
+  { id: 11, name: 'Salford City', league: 'EFL League Two', position: 11, played: 34, won: 14, drawn: 9, lost: 11, goalsFor: 43, goalsAgainst: 38, goalDifference: 5, points: 51, avgXG: 1.26, avgPossession: 49.3 },
+  { id: 12, name: 'Morecambe', league: 'EFL League Two', position: 12, played: 34, won: 13, drawn: 10, lost: 11, goalsFor: 38, goalsAgainst: 35, goalDifference: 3, points: 49, avgXG: 1.10, avgPossession: 46.8 },
+  { id: 13, name: 'Harrogate Town', league: 'EFL League Two', position: 13, played: 34, won: 13, drawn: 9, lost: 12, goalsFor: 41, goalsAgainst: 40, goalDifference: 1, points: 48, avgXG: 1.20, avgPossession: 48.2 },
+  { id: 14, name: 'Tranmere Rovers', league: 'EFL League Two', position: 14, played: 34, won: 12, drawn: 11, lost: 11, goalsFor: 39, goalsAgainst: 37, goalDifference: 2, points: 47, avgXG: 1.15, avgPossession: 47.5 },
+  { id: 15, name: 'Grimsby Town', league: 'EFL League Two', position: 15, played: 34, won: 12, drawn: 9, lost: 13, goalsFor: 36, goalsAgainst: 38, goalDifference: -2, points: 45, avgXG: 1.05, avgPossession: 46.1 },
+  { id: 16, name: 'Accrington Stanley', league: 'EFL League Two', position: 16, played: 34, won: 11, drawn: 10, lost: 13, goalsFor: 35, goalsAgainst: 39, goalDifference: -4, points: 43, avgXG: 1.02, avgPossession: 45.5 },
+  { id: 17, name: 'AFC Wimbledon', league: 'EFL League Two', position: 17, played: 34, won: 11, drawn: 9, lost: 14, goalsFor: 34, goalsAgainst: 42, goalDifference: -8, points: 42, avgXG: 0.98, avgPossession: 44.8 },
+  { id: 18, name: 'Colchester United', league: 'EFL League Two', position: 18, played: 34, won: 10, drawn: 10, lost: 14, goalsFor: 33, goalsAgainst: 43, goalDifference: -10, points: 40, avgXG: 0.95, avgPossession: 44.2 },
+  { id: 19, name: 'Notts County', league: 'EFL League Two', position: 19, played: 34, won: 9, drawn: 11, lost: 14, goalsFor: 31, goalsAgainst: 40, goalDifference: -9, points: 38, avgXG: 0.91, avgPossession: 43.5 },
+  { id: 20, name: 'Crewe Alexandra', league: 'EFL League Two', position: 20, played: 34, won: 9, drawn: 9, lost: 16, goalsFor: 30, goalsAgainst: 45, goalDifference: -15, points: 36, avgXG: 0.88, avgPossession: 43.0 },
+  { id: 21, name: 'Sutton United', league: 'EFL League Two', position: 21, played: 34, won: 8, drawn: 10, lost: 16, goalsFor: 28, goalsAgainst: 44, goalDifference: -16, points: 34, avgXG: 0.82, avgPossession: 42.3 },
+  { id: 22, name: 'Hartlepool United', league: 'EFL League Two', position: 22, played: 34, won: 7, drawn: 10, lost: 17, goalsFor: 27, goalsAgainst: 48, goalDifference: -21, points: 31, avgXG: 0.78, avgPossession: 41.5 },
+  { id: 23, name: 'Rochdale', league: 'EFL League Two', position: 23, played: 34, won: 6, drawn: 9, lost: 19, goalsFor: 25, goalsAgainst: 50, goalDifference: -25, points: 27, avgXG: 0.72, avgPossession: 40.8 },
+  { id: 24, name: 'Oldham Athletic', league: 'EFL League Two', position: 24, played: 34, won: 5, drawn: 8, lost: 21, goalsFor: 22, goalsAgainst: 55, goalDifference: -33, points: 23, avgXG: 0.65, avgPossession: 39.5 },
+];
+
+export const mockLeagueTable: LeagueEntry[] = mockTeams.map((t) => ({
+  position: t.position,
+  team: t.name,
+  played: t.played,
+  won: t.won,
+  drawn: t.drawn,
+  lost: t.lost,
+  goalsFor: t.goalsFor,
+  goalsAgainst: t.goalsAgainst,
+  goalDifference: t.goalDifference,
+  points: t.points,
+}));

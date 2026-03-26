@@ -1,4 +1,4 @@
-import type { Player } from '../types';
+import type { Player, PaginatedPlayersResponse, Team, LeagueEntry } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -23,8 +23,26 @@ export async function fetchPlayers(): Promise<Player[]> {
   return request<Player[]>('/players');
 }
 
+export async function fetchPlayersPaginated(
+  league: string,
+  page: number,
+  limit: number
+): Promise<PaginatedPlayersResponse> {
+  return request<PaginatedPlayersResponse>(
+    `/api/players?league=${encodeURIComponent(league)}&page=${page}&limit=${limit}`
+  );
+}
+
 export async function fetchPlayer(id: number): Promise<Player> {
   return request<Player>(`/player/${id}`);
+}
+
+export async function fetchTeams(): Promise<Team[]> {
+  return request<Team[]>('/api/teams');
+}
+
+export async function fetchLeagueTable(): Promise<LeagueEntry[]> {
+  return request<LeagueEntry[]>('/api/league-table');
 }
 
 export async function updatePlayerNotes(id: number, notes: string): Promise<Player> {

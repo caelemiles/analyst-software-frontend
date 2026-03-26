@@ -13,10 +13,10 @@ export default function FilterBar({ filters, onFilterChange, teams, positions }:
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 mb-6">
+    <div className="glass rounded-xl p-4 mb-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div>
-          <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="search" className="block text-sm font-medium text-slate-400 mb-1">
             Search
           </label>
           <input
@@ -25,18 +25,18 @@ export default function FilterBar({ filters, onFilterChange, teams, positions }:
             placeholder="Search players..."
             value={filters.search}
             onChange={(e) => handleChange('search', e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
         <div>
-          <label htmlFor="team-filter" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="team-filter" className="block text-sm font-medium text-slate-400 mb-1">
             Team
           </label>
           <select
             id="team-filter"
             value={filters.team}
             onChange={(e) => handleChange('team', e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           >
             <option value="">All Teams</option>
             {teams.map((team) => (
@@ -47,14 +47,14 @@ export default function FilterBar({ filters, onFilterChange, teams, positions }:
           </select>
         </div>
         <div>
-          <label htmlFor="position-filter" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="position-filter" className="block text-sm font-medium text-slate-400 mb-1">
             Position
           </label>
           <select
             id="position-filter"
             value={filters.position}
             onChange={(e) => handleChange('position', e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           >
             <option value="">All Positions</option>
             {positions.map((pos) => (
@@ -65,7 +65,7 @@ export default function FilterBar({ filters, onFilterChange, teams, positions }:
           </select>
         </div>
         <div>
-          <label htmlFor="min-age" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="min-age" className="block text-sm font-medium text-slate-400 mb-1">
             Min Age
           </label>
           <input
@@ -74,11 +74,11 @@ export default function FilterBar({ filters, onFilterChange, teams, positions }:
             placeholder="Min"
             value={filters.minAge}
             onChange={(e) => handleChange('minAge', e.target.value ? parseInt(e.target.value) : '')}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
         <div>
-          <label htmlFor="max-age" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="max-age" className="block text-sm font-medium text-slate-400 mb-1">
             Max Age
           </label>
           <input
@@ -87,7 +87,7 @@ export default function FilterBar({ filters, onFilterChange, teams, positions }:
             placeholder="Max"
             value={filters.maxAge}
             onChange={(e) => handleChange('maxAge', e.target.value ? parseInt(e.target.value) : '')}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
       </div>
