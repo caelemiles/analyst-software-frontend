@@ -23,6 +23,15 @@ const mockPlayer: Player = {
     interceptions: 10,
     clearances: 5,
     minutes_played: 2500,
+    rating: 7.2,
+    npxG: 7.8,
+    dribbles: 35,
+    key_passes: 28,
+    aerial_duels_won: 40,
+    yellow_cards: 3,
+    red_cards: 0,
+    fouls_drawn: 30,
+    fouls_committed: 20,
   },
 };
 
