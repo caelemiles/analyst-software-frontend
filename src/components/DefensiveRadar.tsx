@@ -23,12 +23,13 @@ export default function DefensiveRadar({ stats }: DefensiveRadarProps) {
   const aerialDuelsPer90 = calculatePer90(stats.aerial_duels_won, mp);
   const foulsCommittedPer90 = calculatePer90(stats.fouls_committed, mp);
 
-  // Normalization caps for converting to 0-100 scale
-  const maxTackles = 5;
-  const maxInterceptions = 4;
-  const maxClearances = 8;
-  const maxAerialDuels = 6;
-  const maxFouls = 3;
+  // Per-90 caps used to normalize values to a 0-100 radar scale.
+  // Based on typical top-league benchmarks for elite defensive players.
+  const maxTackles = 5;       // ~5 tackles p90 is elite
+  const maxInterceptions = 4; // ~4 interceptions p90 is elite
+  const maxClearances = 8;    // ~8 clearances p90 is elite for CBs
+  const maxAerialDuels = 6;   // ~6 aerial duels won p90 is elite
+  const maxFouls = 3;         // ~3 fouls p90 is a high rate (inverted)
 
   const normalize = (value: number, max: number) =>
     Math.min(Math.round((value / max) * 100), 100);
