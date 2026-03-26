@@ -76,6 +76,17 @@ describe('PlayerCard', () => {
     expect(screen.getByText('England')).toBeInTheDocument();
   });
 
+  it('renders current season stats (minutes, xG, xA)', () => {
+    render(
+      <MemoryRouter>
+        <PlayerCard player={mockPlayer} />
+      </MemoryRouter>
+    );
+    expect(screen.getByText('Minutes')).toBeInTheDocument();
+    expect(screen.getByText('xG')).toBeInTheDocument();
+    expect(screen.getByText('xA')).toBeInTheDocument();
+  });
+
   it('links to player profile page', () => {
     render(
       <MemoryRouter>
