@@ -14,6 +14,7 @@ import {
   Radar,
 } from 'recharts';
 import type { PlayerStats } from '../types';
+import { getPlayerPer90Stats } from '../utils/per90';
 
 interface StatsChartsProps {
   stats: PlayerStats;
@@ -21,9 +22,12 @@ interface StatsChartsProps {
 }
 
 export default function StatsCharts({ stats, position }: StatsChartsProps) {
+  const per90 = getPlayerPer90Stats(stats);
+
   const attackingData = [
     { name: 'Goals', value: stats.goals, xValue: stats.xG },
     { name: 'Assists', value: stats.assists, xValue: stats.xA },
+    { name: 'npxG', value: stats.npxG, xValue: 0 },
   ];
 
   const defensiveData = [
@@ -48,6 +52,13 @@ export default function StatsCharts({ stats, position }: StatsChartsProps) {
         <StatBox label="Minutes Played" value={stats.minutes_played.toLocaleString()} />
         <StatBox label="Pass Accuracy" value={`${stats.pass_accuracy}%`} />
         <StatBox label="Passes Completed" value={stats.passes_completed.toLocaleString()} />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatBox label="Goals p90" value={per90.goalsPer90} />
+        <StatBox label="Assists p90" value={per90.assistsPer90} />
+        <StatBox label="xG p90" value={per90.xGPer90} />
+        <StatBox label="xA p90" value={per90.xAPer90} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

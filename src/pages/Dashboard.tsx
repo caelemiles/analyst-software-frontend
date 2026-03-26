@@ -1,11 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import PlayerCard from '../components/PlayerCard';
+import PlayerSearch from '../components/PlayerSearch';
 import { fetchPlayers } from '../api/client';
 import { mockPlayers } from '../api/mockData';
 import type { Player, PlayerFilters } from '../types';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<PlayerFilters>({
@@ -66,11 +69,17 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">EFL League Two Players</h1>
-        <p className="text-gray-500 mt-1">
-          Browse and scout {players.length} players across League Two
-        </p>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">EFL League Two Players</h1>
+          <p className="text-gray-500 mt-1">
+            Browse and scout {players.length} players across League Two
+          </p>
+        </div>
+        <PlayerSearch
+          players={players}
+          onSelect={(player) => navigate(`/player/${player.id}`)}
+        />
       </div>
 
       <FilterBar

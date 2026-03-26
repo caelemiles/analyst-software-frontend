@@ -45,6 +45,34 @@ export default function Portfolio() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (selectedIds.size === 0) return;
+    const selected = players.filter((p) => selectedIds.has(p.id));
+    const headers = ['Name', 'Team', 'Position', 'Age', 'Appearances', 'Goals', 'Assists', 'xG', 'xA', 'Pass Accuracy', 'Tackles', 'Rating'];
+    const rows = selected.map((p) => [
+      p.name,
+      p.team,
+      p.position,
+      p.age,
+      p.stats.appearances,
+      p.stats.goals,
+      p.stats.assists,
+      p.stats.xG,
+      p.stats.xA,
+      `${p.stats.pass_accuracy}%`,
+      p.stats.tackles,
+      p.stats.rating.toFixed(1),
+    ]);
+    const csvContent = [headers, ...rows].map((row) => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'scouting-portfolio.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleExport = async () => {
     if (selectedIds.size === 0) return;
     setExporting(true);
@@ -153,6 +181,13 @@ export default function Portfolio() {
           <span className="text-sm text-gray-500">
             {selectedIds.size} player{selectedIds.size !== 1 ? 's' : ''} selected
           </span>
+          <button
+            onClick={handleExportCSV}
+            disabled={selectedIds.size === 0}
+            className="bg-emerald-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            📊 Export CSV
+          </button>
           <button
             onClick={handleExport}
             disabled={selectedIds.size === 0 || exporting}
