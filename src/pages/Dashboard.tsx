@@ -71,12 +71,14 @@ export default function Dashboard() {
   const seasonHighlights = useMemo(() => {
     let totalGoals = 0;
     let totalAssists = 0;
+    let topScorer: Player | undefined;
+    let topAssister: Player | undefined;
     for (const p of players) {
       totalGoals += p.stats.goals;
       totalAssists += p.stats.assists;
+      if (!topScorer || p.stats.goals > topScorer.stats.goals) topScorer = p;
+      if (!topAssister || p.stats.assists > topAssister.stats.assists) topAssister = p;
     }
-    const topScorer = [...players].sort((a, b) => b.stats.goals - a.stats.goals)[0];
-    const topAssister = [...players].sort((a, b) => b.stats.assists - a.stats.assists)[0];
     return { totalGoals, totalAssists, topScorer, topAssister };
   }, [players]);
 
