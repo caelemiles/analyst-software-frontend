@@ -5,7 +5,7 @@ import type { MatchLog } from '../types';
 
 // Recharts uses ResizeObserver; stub it for jsdom
 beforeAll(() => {
-  global.ResizeObserver = class {
+  (globalThis as Record<string, unknown>).ResizeObserver = class {
     observe() {}
     unobserve() {}
     disconnect() {}

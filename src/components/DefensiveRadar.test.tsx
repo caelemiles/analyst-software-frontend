@@ -4,7 +4,7 @@ import DefensiveRadar from '../components/DefensiveRadar';
 import type { PlayerStats } from '../types';
 
 beforeAll(() => {
-  global.ResizeObserver = class {
+  (globalThis as Record<string, unknown>).ResizeObserver = class {
     observe() {}
     unobserve() {}
     disconnect() {}
