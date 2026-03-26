@@ -68,7 +68,7 @@ export default function HighlightsSection({ highlights }: HighlightsSectionProps
               <span>{config.icon}</span>
               <span>{config.label}</span>
               {highlight.minute != null && (
-                <span className="font-bold">{highlight.minute}&apos;</span>
+                <span className="font-bold">{highlight.minute}'</span>
               )}
             </button>
           );
@@ -110,7 +110,7 @@ export default function HighlightsSection({ highlights }: HighlightsSectionProps
               <div className="flex items-center gap-2">
                 {highlight.minute != null && (
                   <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                    {highlight.minute}&apos;
+                    {highlight.minute}'
                   </span>
                 )}
                 <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.className}`}>

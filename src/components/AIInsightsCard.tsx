@@ -15,8 +15,9 @@ function generateTrendObservations(matchLogs: MatchLog[]): string[] {
   const avgRating = matchLogs.reduce((sum, m) => sum + m.rating, 0) / matchLogs.length;
 
   // Rating trend
-  const firstHalf = matchLogs.slice(0, Math.floor(matchLogs.length / 2));
-  const secondHalf = matchLogs.slice(Math.floor(matchLogs.length / 2));
+  const midpoint = Math.floor(matchLogs.length / 2);
+  const firstHalf = matchLogs.slice(0, midpoint);
+  const secondHalf = matchLogs.slice(midpoint + (matchLogs.length % 2));
   const avgFirst = firstHalf.reduce((s, m) => s + m.rating, 0) / firstHalf.length;
   const avgSecond = secondHalf.reduce((s, m) => s + m.rating, 0) / secondHalf.length;
 
