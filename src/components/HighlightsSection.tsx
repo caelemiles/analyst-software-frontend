@@ -85,7 +85,7 @@ export default function HighlightsSection({ highlights }: HighlightsSectionProps
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
-              ⚽ Goals &amp; Assists
+              ⚽ Goals & Assists
             </button>
             <button
               onClick={() => handleFilterChange('all')}

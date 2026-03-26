@@ -32,8 +32,8 @@ export const mockPlayers: Player[] = [
     },
     highlights: [
       { id: 'h1', title: 'Goal vs Swindon Town', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-11-15', event_type: 'goal', minute: 23 },
-      { id: 'h1b', title: 'Goal vs Swindon Town', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-09-14', event_type: 'goal', minute: 35 },
-      { id: 'h1c', title: 'Goal vs Swindon Town', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-09-14', event_type: 'goal', minute: 71 },
+      { id: 'h1b', title: '1st Goal vs Swindon Town', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-09-14', event_type: 'goal', minute: 35 },
+      { id: 'h1c', title: '2nd Goal vs Swindon Town', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-09-14', event_type: 'goal', minute: 71 },
       { id: 'h1d', title: 'Goal vs Doncaster Rovers', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-10-05', event_type: 'goal', minute: 58 },
       { id: 'h2', title: 'Assist vs Gillingham', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-12-02', event_type: 'assist', minute: 45 },
       { id: 'h2b', title: 'Assist vs Accrington Stanley', url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', date: '2025-10-19', event_type: 'assist', minute: 32 },
