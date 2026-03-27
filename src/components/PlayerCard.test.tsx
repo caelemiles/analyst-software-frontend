@@ -61,8 +61,8 @@ describe('PlayerCard', () => {
         <PlayerCard player={mockPlayer} />
       </MemoryRouter>
     );
-    expect(screen.getByText('10')).toBeInTheDocument(); // goals
-    expect(screen.getByText('5')).toBeInTheDocument(); // assists
+    expect(screen.getByText(/⚽\s*10/)).toBeInTheDocument(); // goals
+    expect(screen.getByText(/🎯\s*5/)).toBeInTheDocument(); // assists
     expect(screen.getByText('30')).toBeInTheDocument(); // appearances
   });
 

@@ -8,6 +8,7 @@ vi.mock('../api/client', () => ({
   fetchPlayers: vi.fn(),
   fetchPlayersPaginated: vi.fn(),
   fetchPlayersByLeagueAndSeason: vi.fn(),
+  fetchApiPlayers: vi.fn(),
   fetchCurrentSeason: vi.fn(),
 }));
 
@@ -29,7 +30,8 @@ vi.mock('../api/mockData', () => {
 });
 
 beforeEach(async () => {
-  const { fetchPlayers, fetchPlayersPaginated, fetchPlayersByLeagueAndSeason, fetchCurrentSeason } = await import('../api/client');
+  const { fetchPlayers, fetchPlayersPaginated, fetchPlayersByLeagueAndSeason, fetchApiPlayers, fetchCurrentSeason } = await import('../api/client');
+  (fetchApiPlayers as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
   (fetchPlayersByLeagueAndSeason as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
   (fetchPlayersPaginated as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
   (fetchPlayers as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));

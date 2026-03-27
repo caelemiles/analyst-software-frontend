@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchPlayers, fetchPlayersPaginated, fetchPlayersByLeagueAndSeason } from '../api/client';
+import { fetchPlayers, fetchPlayersPaginated, fetchPlayersByLeagueAndSeason, fetchApiPlayers } from '../api/client';
 import { mockPlayers } from '../api/mockData';
 import { useCurrentSeason } from '../hooks/useCurrentSeason';
 import type { Player } from '../types';
@@ -21,21 +21,29 @@ export default function PlayerStatsTable() {
     async function loadPlayers() {
       setError(null);
       try {
-        const data = await fetchPlayersByLeagueAndSeason('EFL-League-Two', season);
-        setPlayers(data);
+        const response = await fetchApiPlayers({ league: 'EFL-League-Two', season });
+        setPlayers(response.players);
+        if (!response.liveData) {
+          setError('Unable to fetch live player data. Showing cached results.');
+        }
       } catch {
         try {
-          const data = await fetchPlayersPaginated('EFL-League-Two', 1, 1000, season);
-          setPlayers(data.players);
+          const data = await fetchPlayersByLeagueAndSeason('EFL-League-Two', season);
+          setPlayers(data);
         } catch {
-          console.error("Paginated player data fetch failed");
           try {
-            const data = await fetchPlayers();
-            setPlayers(data);
+            const data = await fetchPlayersPaginated('EFL-League-Two', 1, 1000, season);
+            setPlayers(data.players);
           } catch {
-            console.error("All player data fetches failed");
-            setPlayers(mockPlayers);
-            setError('Unable to fetch live player data. Showing cached results.');
+            console.error("Paginated player data fetch failed");
+            try {
+              const data = await fetchPlayers();
+              setPlayers(data);
+            } catch {
+              console.error("All player data fetches failed");
+              setPlayers(mockPlayers);
+              setError('Unable to fetch live player data. Showing cached results.');
+            }
           }
         }
       } finally {
@@ -101,7 +109,7 @@ export default function PlayerStatsTable() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <div className="text-lg text-slate-400">Loading player stats...</div>
+          <div className="text-lg text-slate-400">Fetching live data…</div>
         </div>
       </div>
     );

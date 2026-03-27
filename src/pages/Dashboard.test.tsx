@@ -9,6 +9,7 @@ vi.mock('../api/client', () => ({
   fetchPlayersPaginated: vi.fn(),
   fetchLeaguePlayers: vi.fn(),
   fetchPlayersByLeagueAndSeason: vi.fn(),
+  fetchApiPlayers: vi.fn(),
   fetchCurrentSeason: vi.fn(),
 }));
 
@@ -34,7 +35,8 @@ vi.mock('../api/mockData', () => {
 });
 
 beforeEach(async () => {
-  const { fetchPlayers, fetchPlayersPaginated, fetchLeaguePlayers, fetchPlayersByLeagueAndSeason, fetchCurrentSeason } = await import('../api/client');
+  const { fetchPlayers, fetchPlayersPaginated, fetchLeaguePlayers, fetchPlayersByLeagueAndSeason, fetchApiPlayers, fetchCurrentSeason } = await import('../api/client');
+  (fetchApiPlayers as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
   (fetchPlayersByLeagueAndSeason as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
   (fetchPlayersPaginated as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
   (fetchLeaguePlayers as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
@@ -101,12 +103,12 @@ describe('Dashboard', () => {
 
   it('re-fetches data when switching leagues', async () => {
     const user = userEvent.setup();
-    const { fetchPlayersByLeagueAndSeason } = await import('../api/client');
+    const { fetchApiPlayers } = await import('../api/client');
     renderDashboard();
     await screen.findByText('EFL League Two Players');
     // Switch to EFL League One
     await user.selectOptions(screen.getByLabelText('League'), 'EFL-League-One');
-    // fetchPlayersByLeagueAndSeason should have been called with the new league
-    expect(fetchPlayersByLeagueAndSeason).toHaveBeenCalledWith('EFL-League-One', '2025/26');
+    // fetchApiPlayers should have been called with the new league
+    expect(fetchApiPlayers).toHaveBeenCalledWith(expect.objectContaining({ league: 'EFL-League-One', season: '2025/26' }));
   });
 });
