@@ -47,11 +47,11 @@ export default function PlayerCard({ player }: PlayerCardProps) {
       </div>
       <div className="mt-4 grid grid-cols-3 gap-3 text-center">
         <div>
-          <p className="text-2xl font-bold text-white">{player.stats.goals}</p>
+          <p className="text-2xl font-bold text-white">⚽ {player.stats.goals}</p>
           <p className="text-xs text-slate-500">Goals</p>
         </div>
         <div>
-          <p className="text-2xl font-bold text-white">{player.stats.assists}</p>
+          <p className="text-2xl font-bold text-white">🎯 {player.stats.assists}</p>
           <p className="text-xs text-slate-500">Assists</p>
         </div>
         <div>

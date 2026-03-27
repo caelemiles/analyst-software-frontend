@@ -1,4 +1,4 @@
-import type { Player, PaginatedPlayersResponse, Team, LeagueEntry, SeasonInfo } from '../types';
+import type { Player, PaginatedPlayersResponse, Team, LeagueEntry, SeasonInfo, ApiPlayersResponse } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -100,6 +100,37 @@ export async function fetchTeamPlayers(teamId: number): Promise<Player[]> {
 export async function fetchLeaguePlayers(leagueId: string): Promise<Player[]> {
   const data = await request<RawPlayer[]>(`/api/league/${encodeURIComponent(leagueId)}/players`);
   return normalizePlayers(data);
+}
+
+export async function fetchApiPlayers(params?: {
+  league?: string;
+  season?: string;
+  search?: string;
+  team?: string;
+  position?: string;
+  minAge?: number;
+  maxAge?: number;
+  minGoals?: number;
+  minXG?: number;
+}): Promise<ApiPlayersResponse> {
+  const query = new URLSearchParams();
+  if (params?.league) query.set('league', params.league);
+  if (params?.season) query.set('season', params.season);
+  if (params?.search) query.set('search', params.search);
+  if (params?.team) query.set('team', params.team);
+  if (params?.position) query.set('position', params.position);
+  if (params?.minAge !== undefined) query.set('minAge', String(params.minAge));
+  if (params?.maxAge !== undefined) query.set('maxAge', String(params.maxAge));
+  if (params?.minGoals !== undefined) query.set('minGoals', String(params.minGoals));
+  if (params?.minXG !== undefined) query.set('minXG', String(params.minXG));
+  const qs = query.toString();
+  const endpoint = `/api/players${qs ? `?${qs}` : ''}`;
+  const raw = await request<{ players: RawPlayer[]; liveData: boolean; total: number }>(endpoint);
+  return {
+    players: normalizePlayers(raw.players),
+    liveData: raw.liveData,
+    total: raw.total,
+  };
 }
 
 export async function fetchTeams(): Promise<Team[]> {

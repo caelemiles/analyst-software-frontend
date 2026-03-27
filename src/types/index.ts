@@ -138,3 +138,9 @@ export interface SeasonInfo {
   currentSeason: string;
   league: string;
 }
+
+export interface ApiPlayersResponse {
+  players: Player[];
+  liveData: boolean;
+  total: number;
+}

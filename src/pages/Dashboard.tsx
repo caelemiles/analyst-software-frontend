@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import PlayerCard from '../components/PlayerCard';
 import PlayerSearch from '../components/PlayerSearch';
-import { fetchPlayers, fetchPlayersPaginated, fetchLeaguePlayers, fetchPlayersByLeagueAndSeason } from '../api/client';
+import { fetchPlayers, fetchPlayersPaginated, fetchLeaguePlayers, fetchPlayersByLeagueAndSeason, fetchApiPlayers } from '../api/client';
 import { mockPlayers } from '../api/mockData';
 import { useCurrentSeason } from '../hooks/useCurrentSeason';
 import type { Player, PlayerFilters } from '../types';
@@ -42,40 +42,51 @@ export default function Dashboard() {
       setError(null);
       setLastLoadedPage(1);
       try {
-        const data = await fetchPlayersByLeagueAndSeason(selectedLeague, season);
+        const response = await fetchApiPlayers({ league: selectedLeague, season });
         if (!cancelled) {
-          setPlayers(data);
+          setPlayers(response.players);
           setHasMore(false);
+          if (!response.liveData) {
+            setError('Unable to fetch live player data. Showing cached results.');
+          }
         }
       } catch {
         try {
-          const data = await fetchPlayersPaginated(selectedLeague, 1, playersPerPage, season);
+          const data = await fetchPlayersByLeagueAndSeason(selectedLeague, season);
           if (!cancelled) {
-            setPlayers(data.players);
-            setHasMore(data.page < data.totalPages);
+            setPlayers(data);
+            setHasMore(false);
           }
         } catch {
-          console.error("Paginated player data fetch failed");
           try {
-            const data = await fetchLeaguePlayers(selectedLeague);
+            const data = await fetchPlayersPaginated(selectedLeague, 1, playersPerPage, season);
             if (!cancelled) {
-              setPlayers(data);
-              setHasMore(false);
+              setPlayers(data.players);
+              setHasMore(data.page < data.totalPages);
             }
           } catch {
-            console.error("League player data fetch failed");
+            console.error("Paginated player data fetch failed");
             try {
-              const data = await fetchPlayers();
+              const data = await fetchLeaguePlayers(selectedLeague);
               if (!cancelled) {
                 setPlayers(data);
                 setHasMore(false);
               }
             } catch {
-              console.error("All player data fetches failed");
-              if (!cancelled) {
-                setPlayers(mockPlayers);
-                setHasMore(false);
-                setError('Unable to fetch live player data. Showing cached results.');
+              console.error("League player data fetch failed");
+              try {
+                const data = await fetchPlayers();
+                if (!cancelled) {
+                  setPlayers(data);
+                  setHasMore(false);
+                }
+              } catch {
+                console.error("All player data fetches failed");
+                if (!cancelled) {
+                  setPlayers(mockPlayers);
+                  setHasMore(false);
+                  setError('Unable to fetch live player data. Showing cached results.');
+                }
               }
             }
           }
@@ -163,7 +174,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <div className="text-lg text-slate-400">Loading players...</div>
+          <div className="text-lg text-slate-400">Fetching live data…</div>
         </div>
       </div>
     );
