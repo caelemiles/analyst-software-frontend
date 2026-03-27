@@ -3,19 +3,27 @@ import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import PlayerCard from '../components/PlayerCard';
 import PlayerSearch from '../components/PlayerSearch';
-import { fetchPlayers, fetchPlayersPaginated } from '../api/client';
+import { fetchPlayers, fetchPlayersPaginated, fetchLeaguePlayers } from '../api/client';
 import { mockPlayers } from '../api/mockData';
 import { useCurrentSeason } from '../hooks/useCurrentSeason';
 import type { Player, PlayerFilters } from '../types';
+
+const LEAGUES = [
+  { id: 'EFL-League-Two', label: 'EFL League Two' },
+  { id: 'EFL-League-One', label: 'EFL League One' },
+  { id: 'EFL-Championship', label: 'EFL Championship' },
+];
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { season } = useCurrentSeason();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastLoadedPage, setLastLoadedPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [selectedLeague, setSelectedLeague] = useState('EFL-League-Two');
   const playersPerPage = 20;
   const [filters, setFilters] = useState<PlayerFilters>({
     search: '',
@@ -28,33 +36,58 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
+    let cancelled = false;
     async function loadPlayers() {
+      setLoading(true);
+      setError(null);
+      setLastLoadedPage(1);
       try {
-        const data = await fetchPlayersPaginated('EFL-League-Two', 1, playersPerPage);
-        setPlayers(data.players);
-        setHasMore(data.page < data.totalPages);
-      } catch {
+        const data = await fetchPlayersPaginated(selectedLeague, 1, playersPerPage);
+        if (!cancelled) {
+          setPlayers(data.players);
+          setHasMore(data.page < data.totalPages);
+        }
+      } catch (err) {
+        console.error("Player data fetch failed", err);
         try {
-          const data = await fetchPlayers();
-          setPlayers(data);
-          setHasMore(false);
-        } catch {
-          setPlayers(mockPlayers);
-          setHasMore(false);
+          const data = await fetchLeaguePlayers(selectedLeague);
+          if (!cancelled) {
+            setPlayers(data);
+            setHasMore(false);
+          }
+        } catch (err2) {
+          console.error("Player data fetch failed", err2);
+          try {
+            const data = await fetchPlayers();
+            if (!cancelled) {
+              setPlayers(data);
+              setHasMore(false);
+            }
+          } catch (err3) {
+            console.error("Player data fetch failed", err3);
+            if (!cancelled) {
+              setPlayers(mockPlayers);
+              setHasMore(false);
+              setError('Unable to fetch live player data. Showing cached data.');
+            }
+          }
         }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
     loadPlayers();
-  }, []);
+    return () => { cancelled = true; };
+  }, [selectedLeague]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     try {
       const nextPage = lastLoadedPage + 1;
-      const data = await fetchPlayersPaginated('EFL-League-Two', nextPage, playersPerPage);
+      const data = await fetchPlayersPaginated(selectedLeague, nextPage, playersPerPage);
       setPlayers((prev) => {
         const existingIds = new Set(prev.map((p) => p.id));
         const newPlayers = data.players.filter((p) => !existingIds.has(p.id));
@@ -62,7 +95,8 @@ export default function Dashboard() {
       });
       setLastLoadedPage(nextPage);
       setHasMore(data.page < data.totalPages);
-    } catch {
+    } catch (err) {
+      console.error("Player data fetch failed", err);
       setHasMore(false);
     } finally {
       setLoadingMore(false);
@@ -136,6 +170,30 @@ export default function Dashboard() {
         <span className="text-slate-500 text-sm ml-2">• All stats from current season only</span>
       </div>
 
+      {/* League Selector */}
+      <div className="mb-6 flex items-center gap-2">
+        <label htmlFor="league-select" className="text-sm text-slate-400">League:</label>
+        <select
+          id="league-select"
+          aria-label="League"
+          value={selectedLeague}
+          onChange={(e) => setSelectedLeague(e.target.value)}
+          className="px-3 py-1.5 rounded-lg glass text-sm text-white bg-slate-800 border border-slate-700 focus:border-indigo-500 focus:outline-none transition-colors"
+        >
+          {LEAGUES.map((l) => (
+            <option key={l.id} value={l.id}>{l.label}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="mb-6 rounded-xl bg-red-500/10 border border-red-500/30 px-5 py-3 flex items-center gap-3">
+          <span className="text-red-400 text-lg">⚠️</span>
+          <span className="text-sm text-red-300">{error}</span>
+        </div>
+      )}
+
       {/* Season Highlights Summary */}
       {players.length > 0 && (
         <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -178,9 +236,9 @@ export default function Dashboard() {
 
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">EFL League Two Players</h1>
+          <h1 className="text-3xl font-bold text-white">{LEAGUES.find(l => l.id === selectedLeague)?.label ?? selectedLeague} Players</h1>
           <p className="text-slate-400 mt-1">
-            Current Season {season} &middot; Browse and scout {players.length} players across League Two
+            Current Season {season} &middot; Browse and scout {players.length} players across {LEAGUES.find(l => l.id === selectedLeague)?.label ?? selectedLeague}
           </p>
         </div>
         <PlayerSearch
@@ -198,7 +256,9 @@ export default function Dashboard() {
 
       {filteredPlayers.length === 0 ? (
         <div className="text-center py-12 text-slate-400 glass rounded-xl">
-          No players match your filters. Try adjusting your search criteria.
+          {players.length === 0
+            ? 'No player data available. The server may be unavailable or returned no data for this league.'
+            : 'No players match your filters. Try adjusting your search criteria.'}
         </div>
       ) : (
         <>

@@ -36,7 +36,8 @@ export default function PlayerProfile() {
       try {
         const data = await fetchPlayer(parseInt(id));
         setPlayer(data);
-      } catch {
+      } catch (err) {
+        console.error("Player data fetch failed", err);
         const mock = mockPlayers.find((p) => p.id === parseInt(id));
         if (mock) {
           setPlayer(mock);

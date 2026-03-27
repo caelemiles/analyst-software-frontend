@@ -12,21 +12,26 @@ export default function PlayerStatsTable() {
   const { season } = useCurrentSeason();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [sortField, setSortField] = useState<SortField>('goals');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   useEffect(() => {
     async function loadPlayers() {
+      setError(null);
       try {
         const data = await fetchPlayersPaginated('EFL-League-Two', 1, 1000);
         setPlayers(data.players);
-      } catch {
+      } catch (err) {
+        console.error("Player data fetch failed", err);
         try {
           const data = await fetchPlayers();
           setPlayers(data);
-        } catch {
+        } catch (err2) {
+          console.error("Player data fetch failed", err2);
           setPlayers(mockPlayers);
+          setError('Unable to fetch live player data. Showing cached data.');
         }
       } finally {
         setLoading(false);
@@ -104,6 +109,14 @@ export default function PlayerStatsTable() {
         <span className="text-indigo-400 text-lg">📅</span>
         <span className="text-sm font-semibold text-indigo-300">Current Season {season}</span>
       </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="mb-6 rounded-xl bg-red-500/10 border border-red-500/30 px-5 py-3 flex items-center gap-3">
+          <span className="text-red-400 text-lg">⚠️</span>
+          <span className="text-sm text-red-300">{error}</span>
+        </div>
+      )}
 
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

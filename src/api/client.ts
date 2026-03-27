@@ -38,8 +38,29 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   return data;
 }
 
+/** Normalize a raw player object from the backend, handling firstname/lastname fields */
+interface RawPlayer {
+  [key: string]: unknown;
+  name?: string;
+  firstname?: string;
+  lastname?: string;
+}
+
+export function normalizePlayer(raw: RawPlayer): Player {
+  const name = raw.name || [raw.firstname, raw.lastname].filter(Boolean).join(' ') || 'Unknown';
+  const result = { ...raw, name };
+  delete result.firstname;
+  delete result.lastname;
+  return result as unknown as Player;
+}
+
+function normalizePlayers(data: RawPlayer[]): Player[] {
+  return data.map(normalizePlayer);
+}
+
 export async function fetchPlayers(): Promise<Player[]> {
-  return request<Player[]>('/players');
+  const data = await request<RawPlayer[]>('/players');
+  return normalizePlayers(data);
 }
 
 export async function fetchPlayersPaginated(
@@ -47,13 +68,25 @@ export async function fetchPlayersPaginated(
   page: number,
   limit: number
 ): Promise<PaginatedPlayersResponse> {
-  return request<PaginatedPlayersResponse>(
+  const data = await request<PaginatedPlayersResponse & { players: RawPlayer[] }>(
     `/api/players?league=${encodeURIComponent(league)}&page=${page}&limit=${limit}`
   );
+  return { ...data, players: normalizePlayers(data.players) };
 }
 
 export async function fetchPlayer(id: number): Promise<Player> {
-  return request<Player>(`/player/${id}`);
+  const data = await request<RawPlayer>(`/player/${id}`);
+  return normalizePlayer(data);
+}
+
+export async function fetchTeamPlayers(teamId: number): Promise<Player[]> {
+  const data = await request<RawPlayer[]>(`/api/teams/${teamId}/players`);
+  return normalizePlayers(data);
+}
+
+export async function fetchLeaguePlayers(leagueId: string): Promise<Player[]> {
+  const data = await request<RawPlayer[]>(`/api/league/${encodeURIComponent(leagueId)}/players`);
+  return normalizePlayers(data);
 }
 
 export async function fetchTeams(): Promise<Team[]> {

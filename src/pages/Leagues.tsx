@@ -19,7 +19,8 @@ export default function Leagues() {
       try {
         const data = await fetchLeagueTable();
         setTable(data);
-      } catch {
+      } catch (err) {
+        console.error("League table fetch failed", err);
         setTable(mockLeagueTable);
       } finally {
         setLoading(false);

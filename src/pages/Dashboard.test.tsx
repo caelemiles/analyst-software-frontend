@@ -7,6 +7,7 @@ import Dashboard from './Dashboard';
 vi.mock('../api/client', () => ({
   fetchPlayers: vi.fn(),
   fetchPlayersPaginated: vi.fn(),
+  fetchLeaguePlayers: vi.fn(),
   fetchCurrentSeason: vi.fn(),
 }));
 
@@ -32,8 +33,9 @@ vi.mock('../api/mockData', () => {
 });
 
 beforeEach(async () => {
-  const { fetchPlayers, fetchPlayersPaginated, fetchCurrentSeason } = await import('../api/client');
+  const { fetchPlayers, fetchPlayersPaginated, fetchLeaguePlayers, fetchCurrentSeason } = await import('../api/client');
   (fetchPlayersPaginated as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
+  (fetchLeaguePlayers as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
   (fetchPlayers as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
   (fetchCurrentSeason as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
 });
@@ -85,5 +87,24 @@ describe('Dashboard', () => {
     await screen.findByText('EFL League Two Players');
     expect(screen.getByText('Total Goals')).toBeInTheDocument();
     expect(screen.getByText('Total Assists')).toBeInTheDocument();
+  });
+
+  it('renders league selector with default EFL League Two', async () => {
+    renderDashboard();
+    await screen.findByText('EFL League Two Players');
+    const leagueSelect = screen.getByLabelText('League');
+    expect(leagueSelect).toBeInTheDocument();
+    expect((leagueSelect as HTMLSelectElement).value).toBe('EFL-League-Two');
+  });
+
+  it('re-fetches data when switching leagues', async () => {
+    const user = userEvent.setup();
+    const { fetchPlayersPaginated } = await import('../api/client');
+    renderDashboard();
+    await screen.findByText('EFL League Two Players');
+    // Switch to EFL League One
+    await user.selectOptions(screen.getByLabelText('League'), 'EFL-League-One');
+    // fetchPlayersPaginated should have been called with the new league
+    expect(fetchPlayersPaginated).toHaveBeenCalledWith('EFL-League-One', 1, 20);
   });
 });
