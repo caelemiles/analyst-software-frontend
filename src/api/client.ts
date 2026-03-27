@@ -2,7 +2,20 @@ import type { Player, PaginatedPlayersResponse, Team, LeagueEntry } from '../typ
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
+const apiCache = new Map<string, { data: unknown; timestamp: number }>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const cacheKey = endpoint;
+  const isGet = !options?.method || options.method === 'GET';
+
+  if (isGet) {
+    const cached = apiCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data as T;
+    }
+  }
+
   const url = `${API_BASE_URL}${endpoint}`;
   const response = await fetch(url, {
     headers: {
@@ -16,7 +29,13 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     throw new Error(`API Error: ${response.status} ${response.statusText}`);
   }
 
-  return response.json();
+  const data: T = await response.json();
+
+  if (isGet) {
+    apiCache.set(cacheKey, { data, timestamp: Date.now() });
+  }
+
+  return data;
 }
 
 export async function fetchPlayers(): Promise<Player[]> {

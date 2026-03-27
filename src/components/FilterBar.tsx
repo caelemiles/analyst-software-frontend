@@ -14,7 +14,7 @@ export default function FilterBar({ filters, onFilterChange, teams, positions }:
 
   return (
     <div className="glass rounded-xl p-4 mb-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
         <div>
           <label htmlFor="search" className="block text-sm font-medium text-slate-400 mb-1">
             Search
@@ -87,6 +87,33 @@ export default function FilterBar({ filters, onFilterChange, teams, positions }:
             placeholder="Max"
             value={filters.maxAge}
             onChange={(e) => handleChange('maxAge', e.target.value ? parseInt(e.target.value) : '')}
+            className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+        <div>
+          <label htmlFor="min-goals" className="block text-sm font-medium text-slate-400 mb-1">
+            Min Goals
+          </label>
+          <input
+            id="min-goals"
+            type="number"
+            placeholder="Min"
+            value={filters.minGoals}
+            onChange={(e) => handleChange('minGoals', e.target.value ? parseInt(e.target.value) : '')}
+            className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+        <div>
+          <label htmlFor="min-xg" className="block text-sm font-medium text-slate-400 mb-1">
+            Min xG
+          </label>
+          <input
+            id="min-xg"
+            type="number"
+            step="0.1"
+            placeholder="Min"
+            value={filters.minXG}
+            onChange={(e) => handleChange('minXG', e.target.value ? parseFloat(e.target.value) : '')}
             className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
