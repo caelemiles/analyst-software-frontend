@@ -31,6 +31,7 @@ export default function PlayerStatsTable() {
         } catch (err2) {
           console.error("Player data fetch failed", err2);
           setPlayers(mockPlayers);
+          setError('Unable to fetch live player data. Showing cached data.');
         }
       } finally {
         setLoading(false);

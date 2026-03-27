@@ -68,6 +68,7 @@ export default function Dashboard() {
             if (!cancelled) {
               setPlayers(mockPlayers);
               setHasMore(false);
+              setError('Unable to fetch live player data. Showing cached data.');
             }
           }
         }

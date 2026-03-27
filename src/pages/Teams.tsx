@@ -23,12 +23,8 @@ export default function Teams() {
         const data = await fetchTeams();
         setTeams(data);
       } catch (err) {
-        console.error("Player data fetch failed", err);
-        try {
-          setTeams(mockTeams);
-        } catch {
-          setError('Failed to load team data. Please try again later.');
-        }
+        console.error("Team data fetch failed", err);
+        setTeams(mockTeams);
       } finally {
         setLoading(false);
       }
