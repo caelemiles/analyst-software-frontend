@@ -55,6 +55,8 @@ export interface PlayerFilters {
   position: string;
   minAge: number | '';
   maxAge: number | '';
+  minGoals: number | '';
+  minXG: number | '';
 }
 
 export interface PortfolioPlayer {

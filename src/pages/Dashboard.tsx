@@ -11,12 +11,16 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const playersPerPage = 20;
   const [filters, setFilters] = useState<PlayerFilters>({
     search: '',
     team: '',
     position: '',
     minAge: '',
     maxAge: '',
+    minGoals: '',
+    minXG: '',
   });
 
   useEffect(() => {
@@ -63,6 +67,8 @@ export default function Dashboard() {
       if (filters.position && player.position !== filters.position) return false;
       if (filters.minAge !== '' && player.age < filters.minAge) return false;
       if (filters.maxAge !== '' && player.age > filters.maxAge) return false;
+      if (filters.minGoals !== '' && player.stats.goals < filters.minGoals) return false;
+      if (filters.minXG !== '' && player.stats.xG < filters.minXG) return false;
       return true;
     });
   }, [players, filters]);
@@ -84,7 +90,14 @@ export default function Dashboard() {
 
   const handleFilterChange = (newFilters: PlayerFilters) => {
     setFilters(newFilters);
+    setCurrentPage(1);
   };
+
+  const totalPages = Math.ceil(filteredPlayers.length / playersPerPage);
+  const paginatedPlayers = filteredPlayers.slice(
+    (currentPage - 1) * playersPerPage,
+    currentPage * playersPerPage
+  );
 
   if (loading) {
     return (
@@ -171,11 +184,47 @@ export default function Dashboard() {
           No players match your filters. Try adjusting your search criteria.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredPlayers.map((player) => (
-            <PlayerCard key={player.id} player={player} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {paginatedPlayers.map((player) => (
+              <PlayerCard key={player.id} player={player} />
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-center gap-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                ← Prev
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    page === currentPage
+                      ? 'gradient-accent text-white'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Next →
+              </button>
+              <span className="ml-3 text-sm text-slate-500">
+                Showing {(currentPage - 1) * playersPerPage + 1}–{Math.min(currentPage * playersPerPage, filteredPlayers.length)} of {filteredPlayers.length}
+              </span>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
