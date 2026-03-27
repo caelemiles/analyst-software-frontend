@@ -14,6 +14,6 @@ export function config(): AppConfig {
     nodeEnv: process.env.NODE_ENV ?? 'development',
     apiFootballKey: process.env.API_FOOTBALL_KEY ?? '',
     youtubeApiKey: process.env.YOUTUBE_API_KEY ?? '',
-    scrapeIntervalHours: parseInt(process.env.SCRAPE_INTERVAL_HOURS ?? '6', 10),
+    scrapeIntervalHours: parseInt(process.env.SCRAPE_INTERVAL_HOURS ?? '12', 10),
   };
 }

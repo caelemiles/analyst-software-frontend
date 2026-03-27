@@ -76,6 +76,7 @@ export interface ScrapedPlayer {
 
 export interface ScrapedTeam {
   name: string;
+  fotmob_id?: number;
   logo?: string;
   position: number;
   played: number;
@@ -187,6 +188,7 @@ export async function fetchLeagueStandings(leagueName: string): Promise<ScrapedT
 
     teams.push({
       name: entry.name ?? 'Unknown',
+      fotmob_id: entry.id,
       position: entry.idx ?? 0,
       played: entry.played ?? 0,
       won: entry.wins ?? 0,
@@ -326,13 +328,54 @@ export async function scrapeLeague(leagueName: string): Promise<{
     return { teams: [], players: [] };
   }
 
-  // Step 2: For now, return teams with placeholder player data
-  // In production, we'd iterate through each team and fetch their full squad
-  // This is because FotMob rate limits prevent fetching all ~600+ players at once
+  // Step 2: Iterate through each team and fetch squad + player stats
   const players: ScrapedPlayer[] = [];
+  let playersFetched = 0;
+  let playersFailed = 0;
+
+  for (const team of teams) {
+    if (!team.fotmob_id) {
+      console.warn(`[Scraper] No FotMob ID for team ${team.name}, skipping squad fetch`);
+      continue;
+    }
+
+    let teamFetched = 0;
+    let teamFailed = 0;
+
+    try {
+      const squad = await fetchTeamSquad(team.fotmob_id, team.name);
+      await sleep(REQUEST_DELAY_MS);
+
+      for (const member of squad) {
+        try {
+          const playerStats = await fetchPlayerStats(member.id);
+          if (playerStats) {
+            players.push(playerStats);
+            playersFetched++;
+            teamFetched++;
+          } else {
+            playersFailed++;
+            teamFailed++;
+            console.warn(`[Scraper] No stats returned for player ${member.name} (ID: ${member.id})`);
+          }
+        } catch (error) {
+          playersFailed++;
+          teamFailed++;
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`[ERROR] Scraper: Failed to fetch player ${member.name} (ID: ${member.id}): ${message}`);
+        }
+        await sleep(REQUEST_DELAY_MS);
+      }
+
+      console.log(`[INFO] Scraper: ${team.name} — ${teamFetched} players fetched, ${teamFailed} failed`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[ERROR] Scraper: Failed to fetch squad for ${team.name}: ${message}`);
+    }
+  }
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-  console.log(`[Scraper] Scrape complete in ${elapsed}s: ${teams.length} teams, ${players.length} players`);
+  console.log(`[Scraper] Scrape complete in ${elapsed}s: ${teams.length} teams, ${players.length} players (${playersFetched} fetched, ${playersFailed} failed)`);
 
   return { teams, players };
 }

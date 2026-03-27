@@ -6,9 +6,9 @@ let scheduledTask: cron.ScheduledTask | null = null;
 
 /**
  * Start the periodic scrape scheduler.
- * Runs every N hours (default: 6).
+ * Runs every N hours (default: 12).
  */
-export function startScheduler(intervalHours: number = 6): void {
+export function startScheduler(intervalHours: number = 12): void {
   // Validate interval
   const hours = Math.max(1, Math.min(24, intervalHours));
   const cronExpression = `0 */${hours} * * *`;
