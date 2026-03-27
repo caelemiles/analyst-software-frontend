@@ -14,7 +14,7 @@ export default function Dashboard() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [lastLoadedPage, setLastLoadedPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const playersPerPage = 20;
   const [filters, setFilters] = useState<PlayerFilters>({
@@ -53,14 +53,14 @@ export default function Dashboard() {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     try {
-      const nextPage = currentPage + 1;
+      const nextPage = lastLoadedPage + 1;
       const data = await fetchPlayersPaginated('EFL-League-Two', nextPage, playersPerPage);
       setPlayers((prev) => {
         const existingIds = new Set(prev.map((p) => p.id));
         const newPlayers = data.players.filter((p) => !existingIds.has(p.id));
         return [...prev, ...newPlayers];
       });
-      setCurrentPage(nextPage);
+      setLastLoadedPage(nextPage);
       setHasMore(data.page < data.totalPages);
     } catch {
       setHasMore(false);
