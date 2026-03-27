@@ -52,13 +52,13 @@ export default function Leagues() {
       {/* Season Banner */}
       <div className="mb-6 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/20 px-5 py-3 flex items-center gap-3">
         <span className="text-indigo-400 text-lg">📅</span>
-        <span className="text-sm font-semibold text-indigo-300">Season: Current (2025/26)</span>
+        <span className="text-sm font-semibold text-indigo-300">Current Season 2025/26</span>
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white">League Table</h1>
-          <p className="text-slate-400 mt-1">EFL League Two &middot; {table.length} teams</p>
+          <p className="text-slate-400 mt-1">EFL League Two &middot; Current Season 2025/26 &middot; {table.length} teams</p>
         </div>
 
         {/* Filters */}
@@ -112,6 +112,7 @@ export default function Leagues() {
                 <th className="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">GA</th>
                 <th className="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">GD</th>
                 <th className="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Pts</th>
+                <th className="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Form</th>
               </tr>
             </thead>
             <tbody>
@@ -154,6 +155,24 @@ export default function Leagues() {
                       {entry.goalDifference > 0 ? '+' : ''}{entry.goalDifference}
                     </td>
                     <td className="py-3 px-4 text-center font-bold text-white">{entry.points}</td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center justify-center gap-1">
+                        {(entry.form ?? []).map((result, i) => (
+                          <span
+                            key={i}
+                            className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                              result === 'W'
+                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                                : result === 'D'
+                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                                : 'bg-red-500/20 text-red-400 border border-red-500/40'
+                            }`}
+                          >
+                            {result}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
