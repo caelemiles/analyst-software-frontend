@@ -13,15 +13,22 @@ export default function Teams() {
   const { season } = useCurrentSeason();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [expandedTeam, setExpandedTeam] = useState<number | null>(null);
 
   useEffect(() => {
     async function loadTeams() {
+      setError(null);
       try {
         const data = await fetchTeams();
         setTeams(data);
-      } catch {
-        setTeams(mockTeams);
+      } catch (err) {
+        console.error("Player data fetch failed", err);
+        try {
+          setTeams(mockTeams);
+        } catch {
+          setError('Failed to load team data. Please try again later.');
+        }
       } finally {
         setLoading(false);
       }
@@ -47,6 +54,14 @@ export default function Teams() {
         <span className="text-indigo-400 text-lg">📅</span>
         <span className="text-sm font-semibold text-indigo-300">Current Season {season}</span>
       </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="mb-6 rounded-xl bg-red-500/10 border border-red-500/30 px-5 py-3 flex items-center gap-3">
+          <span className="text-red-400 text-lg">⚠️</span>
+          <span className="text-sm text-red-300">{error}</span>
+        </div>
+      )}
 
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-white">Teams</h1>
