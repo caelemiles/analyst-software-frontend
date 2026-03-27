@@ -32,7 +32,12 @@ export default function PlayerCard({ player }: PlayerCardProps) {
             </div>
           )}
           <div>
-            <h3 className="text-lg font-semibold text-white">{player.name}</h3>
+            <h3 className="text-lg font-semibold text-white">
+              {player.name}
+              {player.source === 'scraper' && (
+                <span title="Scraper-sourced data" className="ml-1 text-amber-400 text-sm">⚡</span>
+              )}
+            </h3>
             <p className="text-sm text-slate-400">{player.team}</p>
           </div>
         </div>

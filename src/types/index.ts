@@ -6,6 +6,7 @@ export interface Player {
   age: number;
   nationality: string;
   image_url?: string;
+  source?: 'api' | 'scraper';
   stats: PlayerStats;
   highlights?: Highlight[];
   notes?: string;

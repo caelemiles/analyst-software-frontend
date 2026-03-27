@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchPlayers, fetchPlayersPaginated } from '../api/client';
+import { fetchPlayers, fetchPlayersPaginated, fetchPlayersByLeagueAndSeason } from '../api/client';
 import { mockPlayers } from '../api/mockData';
 import { useCurrentSeason } from '../hooks/useCurrentSeason';
 import type { Player } from '../types';
@@ -21,24 +21,29 @@ export default function PlayerStatsTable() {
     async function loadPlayers() {
       setError(null);
       try {
-        const data = await fetchPlayersPaginated('EFL-League-Two', 1, 1000);
-        setPlayers(data.players);
-      } catch (err) {
-        console.error("Player data fetch failed", err);
+        const data = await fetchPlayersByLeagueAndSeason('EFL-League-Two', season);
+        setPlayers(data);
+      } catch {
         try {
-          const data = await fetchPlayers();
-          setPlayers(data);
-        } catch (err2) {
-          console.error("Player data fetch failed", err2);
-          setPlayers(mockPlayers);
-          setError('Unable to fetch live player data. Showing cached data.');
+          const data = await fetchPlayersPaginated('EFL-League-Two', 1, 1000, season);
+          setPlayers(data.players);
+        } catch {
+          console.error("Paginated player data fetch failed");
+          try {
+            const data = await fetchPlayers();
+            setPlayers(data);
+          } catch {
+            console.error("All player data fetches failed");
+            setPlayers(mockPlayers);
+            setError('Unable to fetch live player data. Showing cached results.');
+          }
         }
       } finally {
         setLoading(false);
       }
     }
     loadPlayers();
-  }, []);
+  }, [season]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -197,6 +202,9 @@ export default function PlayerStatsTable() {
                           </div>
                         )}
                         <span className="font-medium text-white">{player.name}</span>
+                        {player.source === 'scraper' && (
+                          <span title="Scraper-sourced data" className="text-amber-400 text-xs">⚡</span>
+                        )}
                       </Link>
                     </td>
                     <td className="py-3 px-4 text-slate-400">{player.team}</td>

@@ -63,14 +63,27 @@ export async function fetchPlayers(): Promise<Player[]> {
   return normalizePlayers(data);
 }
 
+export async function fetchPlayersByLeagueAndSeason(
+  league: string,
+  season: string
+): Promise<Player[]> {
+  const data = await request<RawPlayer[]>(
+    `/players?league=${encodeURIComponent(league)}&season=${encodeURIComponent(season)}`
+  );
+  return normalizePlayers(data);
+}
+
 export async function fetchPlayersPaginated(
   league: string,
   page: number,
-  limit: number
+  limit: number,
+  season?: string
 ): Promise<PaginatedPlayersResponse> {
-  const data = await request<PaginatedPlayersResponse & { players: RawPlayer[] }>(
-    `/api/players?league=${encodeURIComponent(league)}&page=${page}&limit=${limit}`
-  );
+  let endpoint = `/api/players?league=${encodeURIComponent(league)}&page=${page}&limit=${limit}`;
+  if (season) {
+    endpoint += `&season=${encodeURIComponent(season)}`;
+  }
+  const data = await request<PaginatedPlayersResponse & { players: RawPlayer[] }>(endpoint);
   return { ...data, players: normalizePlayers(data.players) };
 }
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import PlayerCard from '../components/PlayerCard';
 import PlayerSearch from '../components/PlayerSearch';
-import { fetchPlayers, fetchPlayersPaginated, fetchLeaguePlayers } from '../api/client';
+import { fetchPlayers, fetchPlayersPaginated, fetchLeaguePlayers, fetchPlayersByLeagueAndSeason } from '../api/client';
 import { mockPlayers } from '../api/mockData';
 import { useCurrentSeason } from '../hooks/useCurrentSeason';
 import type { Player, PlayerFilters } from '../types';
@@ -42,33 +42,41 @@ export default function Dashboard() {
       setError(null);
       setLastLoadedPage(1);
       try {
-        const data = await fetchPlayersPaginated(selectedLeague, 1, playersPerPage);
+        const data = await fetchPlayersByLeagueAndSeason(selectedLeague, season);
         if (!cancelled) {
-          setPlayers(data.players);
-          setHasMore(data.page < data.totalPages);
+          setPlayers(data);
+          setHasMore(false);
         }
-      } catch (err) {
-        console.error("Player data fetch failed", err);
+      } catch {
         try {
-          const data = await fetchLeaguePlayers(selectedLeague);
+          const data = await fetchPlayersPaginated(selectedLeague, 1, playersPerPage, season);
           if (!cancelled) {
-            setPlayers(data);
-            setHasMore(false);
+            setPlayers(data.players);
+            setHasMore(data.page < data.totalPages);
           }
-        } catch (err2) {
-          console.error("Player data fetch failed", err2);
+        } catch {
+          console.error("Paginated player data fetch failed");
           try {
-            const data = await fetchPlayers();
+            const data = await fetchLeaguePlayers(selectedLeague);
             if (!cancelled) {
               setPlayers(data);
               setHasMore(false);
             }
-          } catch (err3) {
-            console.error("Player data fetch failed", err3);
-            if (!cancelled) {
-              setPlayers(mockPlayers);
-              setHasMore(false);
-              setError('Unable to fetch live player data. Showing cached data.');
+          } catch {
+            console.error("League player data fetch failed");
+            try {
+              const data = await fetchPlayers();
+              if (!cancelled) {
+                setPlayers(data);
+                setHasMore(false);
+              }
+            } catch {
+              console.error("All player data fetches failed");
+              if (!cancelled) {
+                setPlayers(mockPlayers);
+                setHasMore(false);
+                setError('Unable to fetch live player data. Showing cached results.');
+              }
             }
           }
         }
@@ -80,14 +88,14 @@ export default function Dashboard() {
     }
     loadPlayers();
     return () => { cancelled = true; };
-  }, [selectedLeague]);
+  }, [selectedLeague, season]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     try {
       const nextPage = lastLoadedPage + 1;
-      const data = await fetchPlayersPaginated(selectedLeague, nextPage, playersPerPage);
+      const data = await fetchPlayersPaginated(selectedLeague, nextPage, playersPerPage, season);
       setPlayers((prev) => {
         const existingIds = new Set(prev.map((p) => p.id));
         const newPlayers = data.players.filter((p) => !existingIds.has(p.id));
