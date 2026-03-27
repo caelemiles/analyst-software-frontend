@@ -339,6 +339,9 @@ export async function scrapeLeague(leagueName: string): Promise<{
       continue;
     }
 
+    let teamFetched = 0;
+    let teamFailed = 0;
+
     try {
       const squad = await fetchTeamSquad(team.fotmob_id, team.name);
       await sleep(REQUEST_DELAY_MS);
@@ -349,18 +352,22 @@ export async function scrapeLeague(leagueName: string): Promise<{
           if (playerStats) {
             players.push(playerStats);
             playersFetched++;
-            console.log(`[INFO] Scraper: Player ${playerStats.name} fetched successfully`);
+            teamFetched++;
           } else {
             playersFailed++;
+            teamFailed++;
             console.warn(`[Scraper] No stats returned for player ${member.name} (ID: ${member.id})`);
           }
         } catch (error) {
           playersFailed++;
+          teamFailed++;
           const message = error instanceof Error ? error.message : String(error);
           console.error(`[ERROR] Scraper: Failed to fetch player ${member.name} (ID: ${member.id}): ${message}`);
         }
         await sleep(REQUEST_DELAY_MS);
       }
+
+      console.log(`[INFO] Scraper: ${team.name} — ${teamFetched} players fetched, ${teamFailed} failed`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error(`[ERROR] Scraper: Failed to fetch squad for ${team.name}: ${message}`);

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock the fetch function before importing modules
 const mockFetch = vi.fn();
@@ -13,14 +13,19 @@ import {
   type ScrapedPlayer,
 } from '../src/scraper/fotmob.js';
 
-// Speed up tests by mocking setTimeout used by sleep()
-vi.spyOn(globalThis, 'setTimeout').mockImplementation((fn: TimerHandler) => {
-  if (typeof fn === 'function') fn();
-  return 0 as unknown as NodeJS.Timeout;
-});
+let setTimeoutSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   mockFetch.mockReset();
+  // Speed up tests by mocking setTimeout used by sleep()
+  setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout').mockImplementation((fn: TimerHandler) => {
+    if (typeof fn === 'function') fn();
+    return 0 as unknown as NodeJS.Timeout;
+  });
+});
+
+afterEach(() => {
+  setTimeoutSpy.mockRestore();
 });
 
 function jsonResponse(data: unknown) {
