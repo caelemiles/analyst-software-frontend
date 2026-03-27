@@ -132,3 +132,8 @@ export interface LeagueEntry {
   points: number;
   form?: ('W' | 'D' | 'L')[];
 }
+
+export interface SeasonInfo {
+  currentSeason: string;
+  league: string;
+}

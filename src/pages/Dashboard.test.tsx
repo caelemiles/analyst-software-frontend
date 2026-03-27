@@ -7,6 +7,7 @@ import Dashboard from './Dashboard';
 vi.mock('../api/client', () => ({
   fetchPlayers: vi.fn(),
   fetchPlayersPaginated: vi.fn(),
+  fetchCurrentSeason: vi.fn(),
 }));
 
 vi.mock('../api/mockData', () => {
@@ -31,9 +32,10 @@ vi.mock('../api/mockData', () => {
 });
 
 beforeEach(async () => {
-  const { fetchPlayers, fetchPlayersPaginated } = await import('../api/client');
+  const { fetchPlayers, fetchPlayersPaginated, fetchCurrentSeason } = await import('../api/client');
   (fetchPlayersPaginated as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
   (fetchPlayers as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
+  (fetchCurrentSeason as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
 });
 
 function renderDashboard() {

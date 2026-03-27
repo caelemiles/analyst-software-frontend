@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchTeams } from '../api/client';
 import { mockTeams } from '../api/mockData';
+import { useCurrentSeason } from '../hooks/useCurrentSeason';
 import type { Team } from '../types';
 
 function getTeamInitials(name: string): string {
@@ -9,6 +10,7 @@ function getTeamInitials(name: string): string {
 }
 
 export default function Teams() {
+  const { season } = useCurrentSeason();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedTeam, setExpandedTeam] = useState<number | null>(null);
@@ -43,12 +45,12 @@ export default function Teams() {
       {/* Season Banner */}
       <div className="mb-6 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/20 px-5 py-3 flex items-center gap-3">
         <span className="text-indigo-400 text-lg">📅</span>
-        <span className="text-sm font-semibold text-indigo-300">Current Season 2025/26</span>
+        <span className="text-sm font-semibold text-indigo-300">Current Season {season}</span>
       </div>
 
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-white">Teams</h1>
-        <p className="text-slate-400 mt-1">EFL League Two &middot; Current Season 2025/26 &middot; {teams.length} teams</p>
+        <p className="text-slate-400 mt-1">EFL League Two &middot; Current Season {season} &middot; {teams.length} teams</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -105,7 +107,7 @@ export default function Teams() {
               <div className="mt-2 glass rounded-xl p-5 space-y-4">
                 {/* Team Stats */}
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-300 mb-2">Team Stats — 2025/26</h4>
+                  <h4 className="text-sm font-semibold text-slate-300 mb-2">Team Stats — {season}</h4>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-slate-800/50 rounded-lg p-3 text-center">
                       <p className="text-lg font-bold text-indigo-400">{team.avgXG?.toFixed(2) ?? '—'}</p>
