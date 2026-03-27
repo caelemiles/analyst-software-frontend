@@ -34,15 +34,23 @@ export async function runScrape(): Promise<ScrapeResult> {
     // Fetch data from FotMob
     const { teams, players } = await scrapeLeague(LEAGUE_NAME);
 
+    if (teams.length === 0) {
+      console.error(`[ERROR] API Football: No team data returned for ${LEAGUE_NAME}`);
+    }
+    if (players.length === 0 && teams.length > 0) {
+      console.error(`[ERROR] API Football: Player data missing for ${LEAGUE_NAME}`);
+    }
+
     // Upsert teams
     for (const team of teams) {
       try {
         const normalized = normalizeTeamData(team, CURRENT_SEASON, LEAGUE_NAME);
         await upsertTeam(normalized);
         teamsUpserted++;
+        console.log(`[INFO] Scraper: Team ${team.name} inserted/updated successfully`);
       } catch (error) {
         const msg = `Failed to upsert team ${team.name}: ${error instanceof Error ? error.message : String(error)}`;
-        console.error(`[Scraper] ${msg}`);
+        console.error(`[ERROR] Database: ${msg}`);
         errors.push(msg);
       }
     }
@@ -53,9 +61,10 @@ export async function runScrape(): Promise<ScrapeResult> {
         const normalized = normalizePlayerData(player, CURRENT_SEASON, LEAGUE_NAME);
         await upsertPlayer(normalized);
         playersUpserted++;
+        console.log(`[INFO] Scraper: Player ${player.name} inserted/updated successfully`);
       } catch (error) {
         const msg = `Failed to upsert player ${player.name}: ${error instanceof Error ? error.message : String(error)}`;
-        console.error(`[Scraper] ${msg}`);
+        console.error(`[ERROR] Database: ${msg}`);
         errors.push(msg);
       }
     }
@@ -72,7 +81,7 @@ export async function runScrape(): Promise<ScrapeResult> {
     };
   } catch (error) {
     const msg = `Scrape failed: ${error instanceof Error ? error.message : String(error)}`;
-    console.error(`[Scraper] ${msg}`);
+    console.error(`[ERROR] Scraper: ${msg}`);
     errors.push(msg);
 
     return {

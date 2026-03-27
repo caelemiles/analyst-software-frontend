@@ -19,7 +19,7 @@ describe('config', () => {
     expect(cfg.nodeEnv).toBe('development');
     expect(cfg.apiFootballKey).toBe('');
     expect(cfg.youtubeApiKey).toBe('');
-    expect(cfg.scrapeIntervalHours).toBe(6);
+    expect(cfg.scrapeIntervalHours).toBe(12);
 
     // Restore env
     Object.assign(process.env, original);
