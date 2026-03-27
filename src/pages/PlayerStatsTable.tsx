@@ -2,12 +2,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchPlayers, fetchPlayersPaginated } from '../api/client';
 import { mockPlayers } from '../api/mockData';
+import { useCurrentSeason } from '../hooks/useCurrentSeason';
 import type { Player } from '../types';
 
 type SortField = 'name' | 'team' | 'position' | 'appearances' | 'goals' | 'assists' | 'minutes_played' | 'xG' | 'xA' | 'rating';
 type SortDirection = 'asc' | 'desc';
 
 export default function PlayerStatsTable() {
+  const { season } = useCurrentSeason();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -100,14 +102,14 @@ export default function PlayerStatsTable() {
       {/* Season Banner */}
       <div className="mb-6 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/20 px-5 py-3 flex items-center gap-3">
         <span className="text-indigo-400 text-lg">📅</span>
-        <span className="text-sm font-semibold text-indigo-300">Current Season 2025/26</span>
+        <span className="text-sm font-semibold text-indigo-300">Current Season {season}</span>
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white">Player Stats Table</h1>
           <p className="text-slate-400 mt-1">
-            Current Season 2025/26 &middot; {filteredAndSorted.length} of {players.length} players &middot; Click columns to sort
+            Current Season {season} &middot; {filteredAndSorted.length} of {players.length} players &middot; Click columns to sort
           </p>
         </div>
         <div className="relative">

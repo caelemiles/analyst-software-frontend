@@ -5,13 +5,17 @@ import PlayerCard from '../components/PlayerCard';
 import PlayerSearch from '../components/PlayerSearch';
 import { fetchPlayers, fetchPlayersPaginated } from '../api/client';
 import { mockPlayers } from '../api/mockData';
+import { useCurrentSeason } from '../hooks/useCurrentSeason';
 import type { Player, PlayerFilters } from '../types';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { season } = useCurrentSeason();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const playersPerPage = 20;
   const [filters, setFilters] = useState<PlayerFilters>({
     search: '',
@@ -26,17 +30,17 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadPlayers() {
       try {
-        // Try paginated API first — fetch all players
-        const data = await fetchPlayersPaginated('EFL-League-Two', 1, 1000);
+        const data = await fetchPlayersPaginated('EFL-League-Two', 1, playersPerPage);
         setPlayers(data.players);
+        setHasMore(data.page < data.totalPages);
       } catch {
         try {
-          // Fall back to unpaginated API
           const data = await fetchPlayers();
           setPlayers(data);
+          setHasMore(false);
         } catch {
-          // Fall back to mock data
           setPlayers(mockPlayers);
+          setHasMore(false);
         }
       } finally {
         setLoading(false);
@@ -44,6 +48,26 @@ export default function Dashboard() {
     }
     loadPlayers();
   }, []);
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      const data = await fetchPlayersPaginated('EFL-League-Two', nextPage, playersPerPage);
+      setPlayers((prev) => {
+        const existingIds = new Set(prev.map((p) => p.id));
+        const newPlayers = data.players.filter((p) => !existingIds.has(p.id));
+        return [...prev, ...newPlayers];
+      });
+      setCurrentPage(nextPage);
+      setHasMore(data.page < data.totalPages);
+    } catch {
+      setHasMore(false);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const teams = useMemo(
     () => [...new Set(players.map((p) => p.team))].sort(),
@@ -90,14 +114,7 @@ export default function Dashboard() {
 
   const handleFilterChange = (newFilters: PlayerFilters) => {
     setFilters(newFilters);
-    setCurrentPage(1);
   };
-
-  const totalPages = Math.ceil(filteredPlayers.length / playersPerPage);
-  const paginatedPlayers = filteredPlayers.slice(
-    (currentPage - 1) * playersPerPage,
-    currentPage * playersPerPage
-  );
 
   if (loading) {
     return (
@@ -115,7 +132,7 @@ export default function Dashboard() {
       {/* Season Banner */}
       <div className="mb-6 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/20 px-5 py-3 flex items-center gap-3">
         <span className="text-indigo-400 text-lg">📅</span>
-        <span className="text-sm font-semibold text-indigo-300">Current Season 2025/26</span>
+        <span className="text-sm font-semibold text-indigo-300">Current Season {season}</span>
         <span className="text-slate-500 text-sm ml-2">• All stats from current season only</span>
       </div>
 
@@ -163,7 +180,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-3xl font-bold text-white">EFL League Two Players</h1>
           <p className="text-slate-400 mt-1">
-            Current Season 2025/26 &middot; Browse and scout {players.length} players across League Two
+            Current Season {season} &middot; Browse and scout {players.length} players across League Two
           </p>
         </div>
         <PlayerSearch
@@ -186,44 +203,31 @@ export default function Dashboard() {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {paginatedPlayers.map((player) => (
+            {filteredPlayers.map((player) => (
               <PlayerCard key={player.id} player={player} />
             ))}
           </div>
-          {totalPages > 1 && (
-            <div className="mt-6 flex items-center justify-center gap-2">
+          {hasMore && (
+            <div className="mt-6 flex justify-center">
               <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="px-6 py-2.5 rounded-lg text-sm font-medium gradient-accent text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
               >
-                ← Prev
+                {loadingMore ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Loading more players...
+                  </span>
+                ) : (
+                  'Load More Players'
+                )}
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    page === currentPage
-                      ? 'gradient-accent text-white'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                Next →
-              </button>
-              <span className="ml-3 text-sm text-slate-500">
-                Showing {(currentPage - 1) * playersPerPage + 1}–{Math.min(currentPage * playersPerPage, filteredPlayers.length)} of {filteredPlayers.length}
-              </span>
             </div>
           )}
+          <div className="mt-4 text-center text-sm text-slate-500">
+            Showing {filteredPlayers.length} players
+          </div>
         </>
       )}
     </div>

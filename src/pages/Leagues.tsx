@@ -1,14 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
 import { fetchLeagueTable } from '../api/client';
 import { mockLeagueTable } from '../api/mockData';
+import { useCurrentSeason } from '../hooks/useCurrentSeason';
 import type { LeagueEntry } from '../types';
 
-type SortFilter = 'default' | 'topScoring' | 'bestDefense';
+type SortField = 'position' | 'team' | 'played' | 'won' | 'drawn' | 'lost' | 'goalsFor' | 'goalsAgainst' | 'goalDifference' | 'points';
+type SortDirection = 'asc' | 'desc';
 
 export default function Leagues() {
+  const { season } = useCurrentSeason();
   const [table, setTable] = useState<LeagueEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortFilter, setSortFilter] = useState<SortFilter>('default');
+  const [sortField, setSortField] = useState<SortField>('position');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   useEffect(() => {
     async function loadTable() {
@@ -24,17 +28,35 @@ export default function Leagues() {
     loadTable();
   }, []);
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection(field === 'team' ? 'asc' : 'desc');
+    }
+  };
+
+  const sortIndicator = (field: SortField) => {
+    if (sortField !== field) return '';
+    return sortDirection === 'asc' ? ' ↑' : ' ↓';
+  };
+
   const sortedTable = useMemo(() => {
     const copy = [...table];
-    if (sortFilter === 'topScoring') {
-      copy.sort((a, b) => b.goalsFor - a.goalsFor);
-    } else if (sortFilter === 'bestDefense') {
-      copy.sort((a, b) => a.goalsAgainst - b.goalsAgainst);
-    } else {
-      copy.sort((a, b) => a.position - b.position);
-    }
+    copy.sort((a, b) => {
+      const aVal = a[sortField];
+      const bVal = b[sortField];
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        const cmp = aVal.localeCompare(bVal);
+        return sortDirection === 'asc' ? cmp : -cmp;
+      }
+      return sortDirection === 'asc'
+        ? (aVal as number) - (bVal as number)
+        : (bVal as number) - (aVal as number);
+    });
     return copy;
-  }, [table, sortFilter]);
+  }, [table, sortField, sortDirection]);
 
   if (loading) {
     return (
@@ -52,21 +74,21 @@ export default function Leagues() {
       {/* Season Banner */}
       <div className="mb-6 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/20 px-5 py-3 flex items-center gap-3">
         <span className="text-indigo-400 text-lg">📅</span>
-        <span className="text-sm font-semibold text-indigo-300">Current Season 2025/26</span>
+        <span className="text-sm font-semibold text-indigo-300">Current Season {season}</span>
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white">League Table</h1>
-          <p className="text-slate-400 mt-1">EFL League Two &middot; Current Season 2025/26 &middot; {table.length} teams</p>
+          <p className="text-slate-400 mt-1">EFL League Two &middot; Current Season {season} &middot; {table.length} teams &middot; Click columns to sort</p>
         </div>
 
-        {/* Filters */}
+        {/* Quick Sort Presets */}
         <div className="flex rounded-lg overflow-hidden border border-slate-700">
           <button
-            onClick={() => setSortFilter('default')}
+            onClick={() => { setSortField('position'); setSortDirection('asc'); }}
             className={`px-3 py-2 text-sm font-medium transition-colors ${
-              sortFilter === 'default'
+              sortField === 'position'
                 ? 'bg-indigo-600 text-white'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
@@ -74,9 +96,9 @@ export default function Leagues() {
             Standings
           </button>
           <button
-            onClick={() => setSortFilter('topScoring')}
+            onClick={() => { setSortField('goalsFor'); setSortDirection('desc'); }}
             className={`px-3 py-2 text-sm font-medium transition-colors ${
-              sortFilter === 'topScoring'
+              sortField === 'goalsFor'
                 ? 'bg-indigo-600 text-white'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
@@ -84,9 +106,9 @@ export default function Leagues() {
             Top Scoring
           </button>
           <button
-            onClick={() => setSortFilter('bestDefense')}
+            onClick={() => { setSortField('goalsAgainst'); setSortDirection('asc'); }}
             className={`px-3 py-2 text-sm font-medium transition-colors ${
-              sortFilter === 'bestDefense'
+              sortField === 'goalsAgainst'
                 ? 'bg-indigo-600 text-white'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
@@ -102,16 +124,26 @@ export default function Leagues() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-700/50">
-                <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Pos</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Team</th>
-                <th className="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">P</th>
-                <th className="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">W</th>
-                <th className="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">D</th>
-                <th className="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">L</th>
-                <th className="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">GF</th>
-                <th className="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">GA</th>
-                <th className="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">GD</th>
-                <th className="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Pts</th>
+                {([
+                  ['position', 'Pos', 'text-left'],
+                  ['team', 'Team', 'text-left'],
+                  ['played', 'P', 'text-center'],
+                  ['won', 'W', 'text-center'],
+                  ['drawn', 'D', 'text-center'],
+                  ['lost', 'L', 'text-center'],
+                  ['goalsFor', 'GF', 'text-center'],
+                  ['goalsAgainst', 'GA', 'text-center'],
+                  ['goalDifference', 'GD', 'text-center'],
+                  ['points', 'Pts', 'text-center'],
+                ] as [SortField, string, string][]).map(([field, label, align]) => (
+                  <th
+                    key={field}
+                    onClick={() => handleSort(field)}
+                    className={`${align} py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-indigo-400 transition-colors select-none`}
+                  >
+                    {label}{sortIndicator(field)}
+                  </th>
+                ))}
                 <th className="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Form</th>
               </tr>
             </thead>
