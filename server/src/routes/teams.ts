@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { getTeams, getTeamPlayers } from '../db/queries.js';
-import { teamRowToApiFormat } from '../scraper/normalize.js';
+import { teamRowToApiFormat, playerRowToApiFormat } from '../scraper/normalize.js';
 import { CURRENT_SEASON } from '../scraper/index.js';
 
 const router = Router();
@@ -56,9 +56,6 @@ router.get('/:teamId/players', async (req: Request, res: Response): Promise<void
     console.log(`[API] GET /api/teams/${teamId}/players`);
 
     const players = await getTeamPlayers(teamId, CURRENT_SEASON);
-
-    // Import the normalize function
-    const { playerRowToApiFormat } = await import('../scraper/normalize.js');
     const formatted = players.map(playerRowToApiFormat);
 
     res.json(formatted);
