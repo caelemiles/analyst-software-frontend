@@ -13,6 +13,8 @@ const router = Router();
  * Supports pagination with page & limit query params.
  */
 router.get('/', async (req: Request, res: Response): Promise<void> => {
+  console.log('➡️ /api/players called');
+
   try {
     const {
       league,
@@ -49,7 +51,18 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     console.log(`[API] GET /api/players`, JSON.stringify(options));
 
     const { players, total } = await getPlayers(options);
+
+    console.log(`📊 Players from DB: ${players.length}`);
+
+    if (!players || players.length === 0) {
+      console.log('❌ NO PLAYERS IN DATABASE');
+      res.status(500).json({ error: 'No players in DB', players: [], total: 0, liveData: false });
+      return;
+    }
+
     const formatted = players.map(playerRowToApiFormat);
+
+    console.log('✅ Sending players to frontend');
 
     // If pagination was requested, return paginated response
     if (options.page && options.limit) {
@@ -72,7 +85,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`[API] Error fetching players: ${message}`);
+    console.error(`❌ API ERROR: ${message}`);
     res.status(500).json({
       error: 'Failed to fetch players',
       message,
