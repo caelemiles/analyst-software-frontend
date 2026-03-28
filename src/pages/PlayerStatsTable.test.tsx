@@ -6,35 +6,27 @@ import PlayerStatsTable from './PlayerStatsTable';
 
 vi.mock('../api/client', () => ({
   fetchPlayers: vi.fn(),
-  fetchPlayersPaginated: vi.fn(),
-  fetchPlayersByLeagueAndSeason: vi.fn(),
   fetchApiPlayers: vi.fn(),
   fetchCurrentSeason: vi.fn(),
 }));
 
-vi.mock('../api/mockData', () => {
-  const stats = (goals: number, assists: number) => ({
-    appearances: 30, goals, assists, xG: 9.2, xA: 4.8,
-    passes_completed: 400, pass_accuracy: 80, tackles: 15, interceptions: 10,
-    clearances: 5, minutes_played: 2500, rating: 7.2, npxG: 7.8,
-    dribbles: 35, key_passes: 28, aerial_duels_won: 40,
-    yellow_cards: 3, red_cards: 0, fouls_drawn: 30, fouls_committed: 20,
-  });
-  return {
-    mockPlayers: [
-      { id: 1, name: 'Alice Forward', team: 'Team A', position: 'Forward', age: 24, nationality: 'England', stats: stats(15, 5) },
-      { id: 2, name: 'Bob Midfielder', team: 'Team B', position: 'Midfielder', age: 26, nationality: 'England', stats: stats(3, 10) },
-      { id: 3, name: 'Charlie Defender', team: 'Team A', position: 'Defender', age: 28, nationality: 'England', stats: stats(1, 2) },
-    ],
-  };
+const stats = (goals: number, assists: number) => ({
+  appearances: 30, goals, assists, xG: 9.2, xA: 4.8,
+  passes_completed: 400, pass_accuracy: 80, tackles: 15, interceptions: 10,
+  clearances: 5, minutes_played: 2500, rating: 7.2, npxG: 7.8,
+  dribbles: 35, key_passes: 28, aerial_duels_won: 40,
+  yellow_cards: 3, red_cards: 0, fouls_drawn: 30, fouls_committed: 20,
 });
 
+const livePlayers = [
+  { id: 1, name: 'Alice Forward', team: 'Team A', position: 'Forward', age: 24, nationality: 'England', stats: stats(15, 5) },
+  { id: 2, name: 'Bob Midfielder', team: 'Team B', position: 'Midfielder', age: 26, nationality: 'England', stats: stats(3, 10) },
+  { id: 3, name: 'Charlie Defender', team: 'Team A', position: 'Defender', age: 28, nationality: 'England', stats: stats(1, 2) },
+];
+
 beforeEach(async () => {
-  const { fetchPlayers, fetchPlayersPaginated, fetchPlayersByLeagueAndSeason, fetchApiPlayers, fetchCurrentSeason } = await import('../api/client');
-  (fetchApiPlayers as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
-  (fetchPlayersByLeagueAndSeason as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
-  (fetchPlayersPaginated as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
-  (fetchPlayers as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
+  const { fetchApiPlayers, fetchCurrentSeason } = await import('../api/client');
+  (fetchApiPlayers as ReturnType<typeof vi.fn>).mockResolvedValue({ players: livePlayers, liveData: true, total: livePlayers.length });
   (fetchCurrentSeason as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
 });
 
