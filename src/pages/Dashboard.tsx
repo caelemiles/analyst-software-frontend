@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import PlayerCard from '../components/PlayerCard';
 import PlayerSearch from '../components/PlayerSearch';
-import { fetchPlayers, fetchPlayersPaginated, fetchLeaguePlayers, fetchPlayersByLeagueAndSeason, fetchApiPlayers } from '../api/client';
-import { mockPlayers } from '../api/mockData';
+import { fetchPlayers, fetchPlayersPaginated, fetchApiPlayers } from '../api/client';
 import { useCurrentSeason } from '../hooks/useCurrentSeason';
 import type { Player, PlayerFilters } from '../types';
 
@@ -42,53 +41,34 @@ export default function Dashboard() {
       setError(null);
       setLastLoadedPage(1);
       try {
+        console.log("➡️ Fetching players...");
         const response = await fetchApiPlayers({ league: selectedLeague, season });
         if (!cancelled) {
+          if (!response.players || response.players.length === 0) {
+            throw new Error("No live players received");
+          }
+          console.log("📊 Players received:", response.players.length);
           setPlayers(response.players);
           setHasMore(false);
-          if (!response.liveData) {
-            setError('Unable to fetch live player data. Showing cached results.');
-          }
         }
-      } catch {
+      } catch (err) {
+        console.error("❌ FRONTEND ERROR:", err);
         try {
-          const data = await fetchPlayersByLeagueAndSeason(selectedLeague, season);
+          const data = await fetchPlayers();
           if (!cancelled) {
+            if (!data || data.length === 0) {
+              throw new Error("No live players received");
+            }
+            console.log("📊 Players received:", data.length);
             setPlayers(data);
             setHasMore(false);
           }
-        } catch {
-          try {
-            const data = await fetchPlayersPaginated(selectedLeague, 1, playersPerPage, season);
-            if (!cancelled) {
-              setPlayers(data.players);
-              setHasMore(data.page < data.totalPages);
-            }
-          } catch {
-            console.error("Paginated player data fetch failed");
-            try {
-              const data = await fetchLeaguePlayers(selectedLeague);
-              if (!cancelled) {
-                setPlayers(data);
-                setHasMore(false);
-              }
-            } catch {
-              console.error("League player data fetch failed");
-              try {
-                const data = await fetchPlayers();
-                if (!cancelled) {
-                  setPlayers(data);
-                  setHasMore(false);
-                }
-              } catch {
-                console.error("All player data fetches failed");
-                if (!cancelled) {
-                  setPlayers(mockPlayers);
-                  setHasMore(false);
-                  setError('Unable to fetch live player data. Showing cached results.');
-                }
-              }
-            }
+        } catch (fallbackErr) {
+          console.error("❌ FRONTEND ERROR:", fallbackErr);
+          if (!cancelled) {
+            setPlayers([]);
+            setHasMore(false);
+            setError('Failed to fetch live player data. Please check the backend connection.');
           }
         }
       } finally {

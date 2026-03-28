@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchPlayers, fetchPlayersPaginated, fetchPlayersByLeagueAndSeason, fetchApiPlayers } from '../api/client';
-import { mockPlayers } from '../api/mockData';
+import { fetchPlayers, fetchApiPlayers } from '../api/client';
 import { useCurrentSeason } from '../hooks/useCurrentSeason';
 import type { Player } from '../types';
 
@@ -21,30 +20,26 @@ export default function PlayerStatsTable() {
     async function loadPlayers() {
       setError(null);
       try {
+        console.log("➡️ Fetching players...");
         const response = await fetchApiPlayers({ league: 'EFL-League-Two', season });
-        setPlayers(response.players);
-        if (!response.liveData) {
-          setError('Unable to fetch live player data. Showing cached results.');
+        if (!response.players || response.players.length === 0) {
+          throw new Error("No live players received");
         }
-      } catch {
+        console.log("📊 Players received:", response.players.length);
+        setPlayers(response.players);
+      } catch (err) {
+        console.error("❌ FRONTEND ERROR:", err);
         try {
-          const data = await fetchPlayersByLeagueAndSeason('EFL-League-Two', season);
-          setPlayers(data);
-        } catch {
-          try {
-            const data = await fetchPlayersPaginated('EFL-League-Two', 1, 1000, season);
-            setPlayers(data.players);
-          } catch {
-            console.error("Paginated player data fetch failed");
-            try {
-              const data = await fetchPlayers();
-              setPlayers(data);
-            } catch {
-              console.error("All player data fetches failed");
-              setPlayers(mockPlayers);
-              setError('Unable to fetch live player data. Showing cached results.');
-            }
+          const data = await fetchPlayers();
+          if (!data || data.length === 0) {
+            throw new Error("No live players received");
           }
+          console.log("📊 Players received:", data.length);
+          setPlayers(data);
+        } catch (fallbackErr) {
+          console.error("❌ FRONTEND ERROR:", fallbackErr);
+          setPlayers([]);
+          setError('Failed to fetch live player data. Please check the backend connection.');
         }
       } finally {
         setLoading(false);
