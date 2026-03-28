@@ -4,7 +4,7 @@ import { config } from './config.js';
 import { initDatabase } from './db/connection.js';
 import { startScheduler, triggerScrape } from './scheduler/index.js';
 import { needsInitialScrape, runScrape, CURRENT_SEASON, LEAGUE_NAME } from './scraper/index.js';
-import { getLastUpdateTime } from './db/queries.js';
+import { getLastUpdateTime, getPlayers } from './db/queries.js';
 
 import playersRouter from './routes/players.js';
 import teamsRouter from './routes/teams.js';
@@ -98,6 +98,19 @@ app.post('/api/scrape', async (_req, res) => {
   }
 });
 
+// Debug route — returns first 10 players directly from DB for troubleshooting
+app.get('/api/debug/players', async (_req, res) => {
+  try {
+    const { players } = await getPlayers({ limit: 10 });
+    console.log(`[Debug] /api/debug/players returning ${players.length} players`);
+    res.json(players);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[Debug] Error in /api/debug/players: ${message}`);
+    res.status(500).json({ error: message });
+  }
+});
+
 // Health check
 app.get('/api/health', async (_req, res) => {
   try {
@@ -149,6 +162,7 @@ async function start(): Promise<void> {
       console.log(`  GET /api/league-table — League standings`);
       console.log(`  GET /api/season     — Current season info`);
       console.log(`  GET /api/health     — Health check`);
+      console.log(`  GET /api/debug/players — Debug: first 10 players from DB`);
       console.log(`  POST /api/scrape    — Trigger manual scrape`);
     });
   } catch (error) {
