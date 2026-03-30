@@ -152,4 +152,6 @@ export interface DebugInfo {
   fetchTime: string;
   playerCount: number;
   error: string | null;
+  rawBodyLength?: number;
+  rawPlayerNames?: string[];
 }

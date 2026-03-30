@@ -160,9 +160,24 @@ export async function updatePlayerNotes(id: number, notes: string): Promise<Play
   });
 }
 
+function extractPlayerName(r: RawPlayer): string {
+  return (r.name || [r.firstname, r.lastname].filter(Boolean).join(' ') || 'Unknown') as string;
+}
+
+function extractPlayerRows(json: unknown): RawPlayer[] {
+  if (Array.isArray(json)) return json;
+  if (json && typeof json === 'object' && Array.isArray((json as { players?: unknown }).players)) {
+    return (json as { players: RawPlayer[] }).players;
+  }
+  return [];
+}
+
 /**
  * Fetch players from /api/players (or /api/debug/players in test mode)
  * and return both the data and full debug info for the debug panel.
+ *
+ * In debug mode, calls /api/debug/players with NO query params (no league,
+ * season, or other filters). The debug endpoint returns a raw array of rows.
  */
 export async function fetchApiPlayersWithDebug(
   params?: {
@@ -171,12 +186,17 @@ export async function fetchApiPlayersWithDebug(
   },
   useDebugEndpoint = false,
 ): Promise<{ data: ApiPlayersResponse; debug: DebugInfo }> {
-  const query = new URLSearchParams();
-  if (params?.league) query.set('league', params.league);
-  if (params?.season) query.set('season', params.season);
-  const qs = query.toString();
-  const basePath = useDebugEndpoint ? '/api/debug/players' : '/api/players';
-  const endpoint = `${basePath}${qs ? `?${qs}` : ''}`;
+  let endpoint: string;
+  if (useDebugEndpoint) {
+    // Debug mode: call /api/debug/players with NO filters at all
+    endpoint = '/api/debug/players';
+  } else {
+    const query = new URLSearchParams();
+    if (params?.league) query.set('league', params.league);
+    if (params?.season) query.set('season', params.season);
+    const qs = query.toString();
+    endpoint = `/api/players${qs ? `?${qs}` : ''}`;
+  }
   const url = `${API_BASE_URL}${endpoint}`;
 
   const debug: DebugInfo = {
@@ -203,9 +223,33 @@ export async function fetchApiPlayersWithDebug(
       throw new Error(debug.error);
     }
 
-    const raw = await response.json() as { players: RawPlayer[]; liveData: boolean; total: number };
+    const text = await response.text();
+    debug.rawBodyLength = text.length;
+
+    const json = JSON.parse(text);
+
+    if (useDebugEndpoint) {
+      // /api/debug/players returns a raw array of player rows (not wrapped)
+      const rows = extractPlayerRows(json);
+      debug.playerCount = rows.length;
+      debug.rawPlayerNames = rows.slice(0, 2).map(extractPlayerName);
+      console.log(`[DEBUG] Debug endpoint returned ${rows.length} raw rows`);
+
+      return {
+        data: {
+          players: normalizePlayers(rows),
+          liveData: false,
+          total: rows.length,
+        },
+        debug,
+      };
+    }
+
+    // Normal mode: /api/players returns { players: [], liveData, total }
+    const raw = json as { players: RawPlayer[]; liveData: boolean; total: number };
     const players = Array.isArray(raw.players) ? raw.players : [];
     debug.playerCount = players.length;
+    debug.rawPlayerNames = players.slice(0, 2).map(extractPlayerName);
     console.log(`[DEBUG] Parsed JSON payload: ${players.length} players (liveData: ${raw.liveData})`);
 
     return {
