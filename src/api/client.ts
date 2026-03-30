@@ -160,6 +160,18 @@ export async function updatePlayerNotes(id: number, notes: string): Promise<Play
   });
 }
 
+function extractPlayerName(r: RawPlayer): string {
+  return (r.name || [r.firstname, r.lastname].filter(Boolean).join(' ') || 'Unknown') as string;
+}
+
+function extractPlayerRows(json: unknown): RawPlayer[] {
+  if (Array.isArray(json)) return json;
+  if (json && typeof json === 'object' && Array.isArray((json as { players?: unknown }).players)) {
+    return (json as { players: RawPlayer[] }).players;
+  }
+  return [];
+}
+
 /**
  * Fetch players from /api/players (or /api/debug/players in test mode)
  * and return both the data and full debug info for the debug panel.
@@ -218,11 +230,9 @@ export async function fetchApiPlayersWithDebug(
 
     if (useDebugEndpoint) {
       // /api/debug/players returns a raw array of player rows (not wrapped)
-      const rows: RawPlayer[] = Array.isArray(json) ? json : (Array.isArray(json.players) ? json.players : []);
+      const rows = extractPlayerRows(json);
       debug.playerCount = rows.length;
-      debug.rawPlayerNames = rows.slice(0, 2).map(
-        (r) => (r.name || [r.firstname, r.lastname].filter(Boolean).join(' ') || 'Unknown') as string,
-      );
+      debug.rawPlayerNames = rows.slice(0, 2).map(extractPlayerName);
       console.log(`[DEBUG] Debug endpoint returned ${rows.length} raw rows`);
 
       return {
@@ -239,9 +249,7 @@ export async function fetchApiPlayersWithDebug(
     const raw = json as { players: RawPlayer[]; liveData: boolean; total: number };
     const players = Array.isArray(raw.players) ? raw.players : [];
     debug.playerCount = players.length;
-    debug.rawPlayerNames = players.slice(0, 2).map(
-      (r) => (r.name || [r.firstname, r.lastname].filter(Boolean).join(' ') || 'Unknown') as string,
-    );
+    debug.rawPlayerNames = players.slice(0, 2).map(extractPlayerName);
     console.log(`[DEBUG] Parsed JSON payload: ${players.length} players (liveData: ${raw.liveData})`);
 
     return {
