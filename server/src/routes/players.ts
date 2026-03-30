@@ -7,15 +7,49 @@ import { CURRENT_SEASON } from '../scraper/index.js';
 const router = Router();
 
 /**
+ * Normalize an incoming season string to the format stored in the DB (e.g. "2025/26").
+ * Handles:
+ *   "2025/26"  → "2025/26"  (already correct)
+ *   "2025-26"  → "2025/26"
+ *   "2025"     → "2025/26"  (assumes /YY+1)
+ *   ""         → CURRENT_SEASON fallback
+ */
+function normalizeSeason(raw: string | undefined): string {
+  if (!raw || raw.trim() === '') return CURRENT_SEASON;
+
+  const trimmed = raw.trim();
+
+  // Already in "YYYY/YY" form
+  if (/^\d{4}\/\d{2}$/.test(trimmed)) return trimmed;
+
+  // "YYYY-YY" → replace dash with slash
+  if (/^\d{4}-\d{2}$/.test(trimmed)) return trimmed.replace('-', '/');
+
+  // Bare year "YYYY" → derive the short second year
+  if (/^\d{4}$/.test(trimmed)) {
+    const year = parseInt(trimmed, 10);
+    const nextShort = String((year + 1) % 100).padStart(2, '0');
+    return `${year}/${nextShort}`;
+  }
+
+  // Unrecognised — return as-is so it can still match if the DB stores this value
+  return trimmed;
+}
+
+/**
  * GET /api/players
  * Returns all players with current season stats.
  * Supports filtering by league, season, team, position, search, age, goals, xG.
  * Supports pagination with page & limit query params.
+ *
+ * NEVER returns HTTP 500 for empty results — returns 200 with an empty array.
  */
 router.get('/', async (req: Request, res: Response): Promise<void> => {
-  console.log('➡️ /api/players called');
+  console.log(`[API] ➡️ /api/players request received`);
+  console.log(`[API]   Raw query params: ${JSON.stringify(req.query)}`);
 
   try {
+    // --- Stage 1: Parse incoming query params ---
     const {
       league,
       season,
@@ -30,13 +64,24 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       limit,
     } = req.query;
 
+    console.log(`[API]   Raw league param: ${JSON.stringify(league)}`);
+    console.log(`[API]   Raw season param: ${JSON.stringify(season)}`);
+
+    // --- Stage 2: Normalize league ---
     const leagueName = typeof league === 'string'
       ? league.replace(/-/g, ' ')
       : 'EFL League Two';
+    console.log(`[API]   Normalized league: "${leagueName}"`);
+
+    // --- Stage 3: Normalize season ---
+    const normalizedSeason = normalizeSeason(
+      typeof season === 'string' ? season : undefined
+    );
+    console.log(`[API]   Normalized season: "${normalizedSeason}"`);
 
     const options = {
       league: leagueName,
-      season: (typeof season === 'string' ? season : CURRENT_SEASON),
+      season: normalizedSeason,
       team: typeof team === 'string' ? team : undefined,
       position: typeof position === 'string' ? position : undefined,
       search: typeof search === 'string' ? search : undefined,
@@ -48,21 +93,22 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       limit: limit ? parseInt(String(limit), 10) : undefined,
     };
 
-    console.log(`[API] GET /api/players`, JSON.stringify(options));
+    console.log(`[API]   Parsed options: ${JSON.stringify(options)}`);
 
+    // --- Stage 4: Query database ---
+    console.log(`[API]   Database query started…`);
     const { players, total } = await getPlayers(options);
+    console.log(`[API]   Database query finished — ${players.length} rows returned (total matching: ${total})`);
 
-    console.log(`📊 Players from DB: ${players.length}`);
-
+    // --- Stage 5: Return results (200 even when empty) ---
     if (!players || players.length === 0) {
-      console.log('❌ NO PLAYERS IN DATABASE');
-      res.status(500).json({ error: 'No players in DB', players: [], total: 0, liveData: false });
+      console.log(`[API]   No players matched filters — returning 200 with empty array`);
+      res.json({ players: [], total: 0, liveData: false });
       return;
     }
 
     const formatted = players.map(playerRowToApiFormat);
-
-    console.log('✅ Sending players to frontend');
+    console.log(`[API]   ✅ Sending ${formatted.length} players to frontend`);
 
     // If pagination was requested, return paginated response
     if (options.page && options.limit) {
@@ -85,8 +131,14 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`❌ API ERROR: ${message}`);
-    res.status(500).json({
+    const stack = error instanceof Error ? error.stack : '';
+    console.error(`[API] ❌ /api/players UNHANDLED ERROR`);
+    console.error(`[API]   Message: ${message}`);
+    console.error(`[API]   Stack: ${stack}`);
+    console.error(`[API]   Query params were: ${JSON.stringify(req.query)}`);
+
+    // Return a structured error payload — still 200 so the frontend can handle it gracefully
+    res.json({
       error: 'Failed to fetch players',
       message,
       players: [],
