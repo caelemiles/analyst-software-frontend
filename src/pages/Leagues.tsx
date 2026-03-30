@@ -10,6 +10,7 @@ export default function Leagues() {
   const { season } = useCurrentSeason();
   const [table, setTable] = useState<LeagueEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>('position');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -21,6 +22,7 @@ export default function Leagues() {
       } catch (err) {
         console.error("League table fetch failed", err);
         setTable([]);
+        setError('Failed to fetch league table. Please check the backend connection.');
       } finally {
         setLoading(false);
       }
@@ -76,6 +78,14 @@ export default function Leagues() {
         <span className="text-indigo-400 text-lg">📅</span>
         <span className="text-sm font-semibold text-indigo-300">Current Season {season}</span>
       </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="mb-6 rounded-xl bg-red-500/10 border border-red-500/30 px-5 py-3 flex items-center gap-3">
+          <span className="text-red-400 text-lg">⚠️</span>
+          <span className="text-sm text-red-300">{error}</span>
+        </div>
+      )}
 
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
