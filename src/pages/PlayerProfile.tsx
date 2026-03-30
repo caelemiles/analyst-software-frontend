@@ -9,7 +9,6 @@ import OffensiveRadar from '../components/OffensiveRadar';
 import PerformanceTrends from '../components/PerformanceTrends';
 import ShotHeatmap from '../components/ShotHeatmap';
 import { fetchPlayer } from '../api/client';
-import { mockPlayers } from '../api/mockData';
 import type { Player } from '../types';
 
 type Tab = 'overview' | 'stats' | 'per90' | 'radar' | 'heatmap' | 'trends' | 'highlights' | 'ai';
@@ -38,12 +37,7 @@ export default function PlayerProfile() {
         setPlayer(data);
       } catch (err) {
         console.error("Player data fetch failed", err);
-        const mock = mockPlayers.find((p) => p.id === parseInt(id));
-        if (mock) {
-          setPlayer(mock);
-        } else {
-          setError('Player not found');
-        }
+        setError('Player not found. The backend may be unavailable.');
       } finally {
         setLoading(false);
       }

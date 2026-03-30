@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import { fetchLeagueTable } from '../api/client';
-import { mockLeagueTable } from '../api/mockData';
 import { useCurrentSeason } from '../hooks/useCurrentSeason';
 import type { LeagueEntry } from '../types';
 
@@ -21,7 +20,7 @@ export default function Leagues() {
         setTable(data);
       } catch (err) {
         console.error("League table fetch failed", err);
-        setTable(mockLeagueTable);
+        setTable([]);
       } finally {
         setLoading(false);
       }

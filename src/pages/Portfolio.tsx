@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { fetchPlayers, exportPortfolio } from '../api/client';
-import { mockPlayers } from '../api/mockData';
 import type { Player } from '../types';
 
 export default function Portfolio() {
@@ -17,7 +16,7 @@ export default function Portfolio() {
         const data = await fetchPlayers();
         setPlayers(data);
       } catch {
-        setPlayers(mockPlayers);
+        setPlayers([]);
       } finally {
         setLoading(false);
       }
