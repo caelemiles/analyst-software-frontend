@@ -144,5 +144,52 @@ describe('Dashboard', () => {
     await screen.findByText('EFL League Two Players');
     const toggle = screen.getByLabelText('Toggle debug endpoint');
     expect(toggle).toBeInTheDocument();
+    // In normal mode, label shows "Normal mode (/api/players)"
+    const panel = screen.getByTestId('debug-panel');
+    expect(panel.textContent).toContain('Normal mode (/api/players)');
+  });
+
+  it('calls /api/debug/players with no params when debug mode is toggled on', async () => {
+    const user = userEvent.setup();
+    const { fetchApiPlayersWithDebug } = await import('../api/client');
+
+    // Mock debug response
+    (fetchApiPlayersWithDebug as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { players: livePlayers, liveData: false, total: livePlayers.length },
+      debug: {
+        url: 'http://localhost:8000/api/debug/players',
+        status: 200,
+        statusText: 'OK',
+        fetchTime: '2026-01-01T00:00:00.000Z',
+        playerCount: livePlayers.length,
+        error: null,
+        rawBodyLength: 500,
+        rawPlayerNames: ['Player 1', 'Player 2'],
+      },
+    });
+
+    renderDashboard();
+    await screen.findByText('EFL League Two Players');
+    const toggle = screen.getByLabelText('Toggle debug endpoint');
+    await user.click(toggle);
+
+    // Should call with undefined params and useDebugEndpoint=true
+    expect(fetchApiPlayersWithDebug).toHaveBeenCalledWith(undefined, true);
+
+    // Debug mode heading appears
+    await screen.findByText('Debug Mode — Raw Player Rows');
+
+    // Debug panel shows "Debug mode ON"
+    const panel = screen.getByTestId('debug-panel');
+    expect(panel.textContent).toContain('Debug mode ON (/api/debug/players)');
+    expect(panel.textContent).toContain('/api/debug/players');
+
+    // Raw body length and first player names shown
+    expect(panel.textContent).toContain('500 chars');
+    expect(panel.textContent).toContain('Player 1, Player 2');
+
+    // League selector and season highlights should be hidden
+    expect(screen.queryByLabelText('League')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total Goals')).not.toBeInTheDocument();
   });
 });

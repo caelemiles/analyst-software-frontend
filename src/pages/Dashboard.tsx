@@ -40,7 +40,7 @@ export default function Dashboard() {
       console.log(`➡️ Fetching players (debugMode: ${debugMode})...`);
 
       const { data, debug } = await fetchApiPlayersWithDebug(
-        { league: selectedLeague, season },
+        debugMode ? undefined : { league: selectedLeague, season },
         debugMode,
       );
 
@@ -130,7 +130,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-2">
           <span className="text-yellow-400 font-bold text-sm">🔍 Debug Panel</span>
           <label className="flex items-center gap-2 cursor-pointer">
-            <span className="text-slate-400">Test mode (/api/debug/players)</span>
+            <span className="text-slate-400">{debugMode ? 'Debug mode ON (/api/debug/players)' : 'Normal mode (/api/players)'}</span>
             <input
               type="checkbox"
               checked={debugMode}
@@ -151,6 +151,18 @@ export default function Dashboard() {
                 {debugInfo.playerCount}
               </span>
             </div>
+            {debugInfo.rawBodyLength !== undefined && (
+              <div>
+                <span className="text-slate-500">Raw response body length:</span>{' '}
+                <span className="text-amber-300">{debugInfo.rawBodyLength} chars</span>
+              </div>
+            )}
+            {debugInfo.rawPlayerNames && debugInfo.rawPlayerNames.length > 0 && (
+              <div>
+                <span className="text-slate-500">First players:</span>{' '}
+                <span className="text-cyan-300">{debugInfo.rawPlayerNames.join(', ')}</span>
+              </div>
+            )}
             {debugInfo.error && (
               <div className="col-span-full text-red-400"><span className="text-slate-500">Error:</span> {debugInfo.error}</div>
             )}
@@ -158,28 +170,32 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Season Banner */}
-      <div className="mb-6 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/20 px-5 py-3 flex items-center gap-3">
-        <span className="text-indigo-400 text-lg">📅</span>
-        <span className="text-sm font-semibold text-indigo-300">Current Season {season}</span>
-        <span className="text-slate-500 text-sm ml-2">• All stats from current season only</span>
-      </div>
+      {/* Season Banner — hidden in debug mode */}
+      {!debugMode && (
+        <div className="mb-6 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/20 px-5 py-3 flex items-center gap-3">
+          <span className="text-indigo-400 text-lg">📅</span>
+          <span className="text-sm font-semibold text-indigo-300">Current Season {season}</span>
+          <span className="text-slate-500 text-sm ml-2">• All stats from current season only</span>
+        </div>
+      )}
 
-      {/* League Selector */}
-      <div className="mb-6 flex items-center gap-2">
-        <label htmlFor="league-select" className="text-sm text-slate-400">League:</label>
-        <select
-          id="league-select"
-          aria-label="League"
-          value={selectedLeague}
-          onChange={(e) => setSelectedLeague(e.target.value)}
-          className="px-3 py-1.5 rounded-lg glass text-sm text-white bg-slate-800 border border-slate-700 focus:border-indigo-500 focus:outline-none transition-colors"
-        >
-          {LEAGUES.map((l) => (
-            <option key={l.id} value={l.id}>{l.label}</option>
-          ))}
-        </select>
-      </div>
+      {/* League Selector — hidden in debug mode */}
+      {!debugMode && (
+        <div className="mb-6 flex items-center gap-2">
+          <label htmlFor="league-select" className="text-sm text-slate-400">League:</label>
+          <select
+            id="league-select"
+            aria-label="League"
+            value={selectedLeague}
+            onChange={(e) => setSelectedLeague(e.target.value)}
+            className="px-3 py-1.5 rounded-lg glass text-sm text-white bg-slate-800 border border-slate-700 focus:border-indigo-500 focus:outline-none transition-colors"
+          >
+            {LEAGUES.map((l) => (
+              <option key={l.id} value={l.id}>{l.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Error Banner */}
       {error && (
@@ -189,8 +205,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Season Highlights Summary — only when players exist */}
-      {players.length > 0 && (
+      {/* Season Highlights Summary — only when players exist and NOT in debug mode */}
+      {!debugMode && players.length > 0 && (
         <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="glass rounded-xl p-4 text-center">
             <p className="text-2xl font-bold text-emerald-400">{seasonHighlights.totalGoals}</p>
@@ -229,42 +245,73 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white">{LEAGUES.find(l => l.id === selectedLeague)?.label ?? selectedLeague} Players</h1>
-          <p className="text-slate-400 mt-1">
-            Current Season {season} &middot; Browse and scout {players.length} players across {LEAGUES.find(l => l.id === selectedLeague)?.label ?? selectedLeague}
-          </p>
-        </div>
-        <PlayerSearch
-          players={players}
-          onSelect={(player) => navigate(`/player/${player.id}`)}
-        />
-      </div>
-
-      <FilterBar
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        teams={teams}
-        positions={positions}
-      />
-
-      {filteredPlayers.length === 0 ? (
-        <div className="text-center py-12 text-slate-400 glass rounded-xl">
-          {players.length === 0
-            ? 'No player data available. The server may be unavailable or returned no data for this league.'
-            : 'No players match your filters. Try adjusting your search criteria.'}
-        </div>
-      ) : (
+      {debugMode ? (
+        /* Debug mode: show raw rows with no filters, search, or derived logic */
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredPlayers.map((player) => (
-              <PlayerCard key={player.id} player={player} />
-            ))}
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-white">Debug Mode — Raw Player Rows</h1>
+            <p className="text-slate-400 mt-1">
+              Showing {players.length} unfiltered rows from /api/debug/players
+            </p>
           </div>
-          <div className="mt-4 text-center text-sm text-slate-500">
-            Showing {filteredPlayers.length} players
+          {players.length === 0 ? (
+            <div className="text-center py-12 text-slate-400 glass rounded-xl">
+              No rows returned from /api/debug/players. The backend database may be empty or unseeded.
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {players.map((player) => (
+                  <PlayerCard key={player.id} player={player} />
+                ))}
+              </div>
+              <div className="mt-4 text-center text-sm text-slate-500">
+                Showing {players.length} raw rows (debug)
+              </div>
+            </>
+          )}
+        </>
+      ) : (
+        /* Normal mode: filters, search, and derived calculations */
+        <>
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-white">{LEAGUES.find(l => l.id === selectedLeague)?.label ?? selectedLeague} Players</h1>
+              <p className="text-slate-400 mt-1">
+                Current Season {season} &middot; Browse and scout {players.length} players across {LEAGUES.find(l => l.id === selectedLeague)?.label ?? selectedLeague}
+              </p>
+            </div>
+            <PlayerSearch
+              players={players}
+              onSelect={(player) => navigate(`/player/${player.id}`)}
+            />
           </div>
+
+          <FilterBar
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            teams={teams}
+            positions={positions}
+          />
+
+          {filteredPlayers.length === 0 ? (
+            <div className="text-center py-12 text-slate-400 glass rounded-xl">
+              {players.length === 0
+                ? 'No player data available. The server may be unavailable or returned no data for this league.'
+                : 'No players match your filters. Try adjusting your search criteria.'}
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredPlayers.map((player) => (
+                  <PlayerCard key={player.id} player={player} />
+                ))}
+              </div>
+              <div className="mt-4 text-center text-sm text-slate-500">
+                Showing {filteredPlayers.length} players
+              </div>
+            </>
+          )}
         </>
       )}
     </div>
