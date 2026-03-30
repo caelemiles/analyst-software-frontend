@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { fetchPlayers, exportPortfolio } from '../api/client';
-import { mockPlayers } from '../api/mockData';
 import type { Player } from '../types';
 
 export default function Portfolio() {
@@ -10,6 +9,7 @@ export default function Portfolio() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadPlayers() {
@@ -17,7 +17,8 @@ export default function Portfolio() {
         const data = await fetchPlayers();
         setPlayers(data);
       } catch {
-        setPlayers(mockPlayers);
+        setPlayers([]);
+        setError('Failed to fetch player data. Please check the backend connection.');
       } finally {
         setLoading(false);
       }
@@ -180,6 +181,14 @@ export default function Portfolio() {
 
   return (
     <div>
+      {/* Error Banner */}
+      {error && (
+        <div className="mb-6 rounded-xl bg-red-500/10 border border-red-500/30 px-5 py-3 flex items-center gap-3">
+          <span className="text-red-400 text-lg">⚠️</span>
+          <span className="text-sm text-red-300">{error}</span>
+        </div>
+      )}
+
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">Scouting Portfolio</h1>

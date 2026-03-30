@@ -17,6 +17,7 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   }
 
   const url = `${API_BASE_URL}${endpoint}`;
+  console.log(`[DEBUG] Requesting: ${url}`);
   const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
@@ -24,6 +25,8 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     },
     ...options,
   });
+
+  console.log(`[DEBUG] Response status: ${response.status} ${response.statusText}`);
 
   if (!response.ok) {
     throw new Error(`API Error: ${response.status} ${response.statusText}`);
@@ -126,6 +129,7 @@ export async function fetchApiPlayers(params?: {
   const qs = query.toString();
   const endpoint = `/api/players${qs ? `?${qs}` : ''}`;
   const raw = await request<{ players: RawPlayer[]; liveData: boolean; total: number }>(endpoint);
+  console.log(`[DEBUG] fetchApiPlayers returned ${raw.players?.length ?? 0} players (liveData: ${raw.liveData})`);
   return {
     players: normalizePlayers(raw.players),
     liveData: raw.liveData,

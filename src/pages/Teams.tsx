@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchTeams } from '../api/client';
-import { mockTeams } from '../api/mockData';
 import { useCurrentSeason } from '../hooks/useCurrentSeason';
 import type { Team } from '../types';
 
@@ -24,7 +23,8 @@ export default function Teams() {
         setTeams(data);
       } catch (err) {
         console.error("Team data fetch failed", err);
-        setTeams(mockTeams);
+        setTeams([]);
+        setError('Failed to fetch team data. Please check the backend connection.');
       } finally {
         setLoading(false);
       }
