@@ -5,9 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Dashboard from './Dashboard';
 
 vi.mock('../api/client', () => ({
-  fetchPlayers: vi.fn(),
-  fetchPlayersPaginated: vi.fn(),
-  fetchApiPlayers: vi.fn(),
+  fetchApiPlayersWithDebug: vi.fn(),
   fetchCurrentSeason: vi.fn(),
 }));
 
@@ -29,10 +27,21 @@ const livePlayers = Array.from({ length: 15 }, (_, i) => ({
   stats,
 }));
 
+const debugInfo = {
+  url: 'http://localhost:8000/api/players?league=EFL-League-Two&season=2025%2F26',
+  status: 200,
+  statusText: 'OK',
+  fetchTime: '2026-01-01T00:00:00.000Z',
+  playerCount: livePlayers.length,
+  error: null,
+};
+
 beforeEach(async () => {
-  const { fetchPlayersPaginated, fetchApiPlayers, fetchCurrentSeason } = await import('../api/client');
-  (fetchApiPlayers as ReturnType<typeof vi.fn>).mockResolvedValue({ players: livePlayers, liveData: true, total: livePlayers.length });
-  (fetchPlayersPaginated as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
+  const { fetchApiPlayersWithDebug, fetchCurrentSeason } = await import('../api/client');
+  (fetchApiPlayersWithDebug as ReturnType<typeof vi.fn>).mockResolvedValue({
+    data: { players: livePlayers, liveData: true, total: livePlayers.length },
+    debug: debugInfo,
+  });
   (fetchCurrentSeason as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API unavailable'));
 });
 
@@ -95,12 +104,45 @@ describe('Dashboard', () => {
 
   it('re-fetches data when switching leagues', async () => {
     const user = userEvent.setup();
-    const { fetchApiPlayers } = await import('../api/client');
+    const { fetchApiPlayersWithDebug } = await import('../api/client');
     renderDashboard();
     await screen.findByText('EFL League Two Players');
     // Switch to EFL League One
     await user.selectOptions(screen.getByLabelText('League'), 'EFL-League-One');
-    // fetchApiPlayers should have been called with the new league
-    expect(fetchApiPlayers).toHaveBeenCalledWith(expect.objectContaining({ league: 'EFL-League-One', season: '2025/26' }));
+    // fetchApiPlayersWithDebug should have been called with the new league
+    expect(fetchApiPlayersWithDebug).toHaveBeenCalledWith(
+      expect.objectContaining({ league: 'EFL-League-One', season: '2025/26' }),
+      false,
+    );
+  });
+
+  it('renders the debug panel with backend info', async () => {
+    renderDashboard();
+    await screen.findByText('EFL League Two Players');
+    const panel = screen.getByTestId('debug-panel');
+    expect(panel).toBeInTheDocument();
+    expect(panel.textContent).toContain('Debug Panel');
+    expect(panel.textContent).toContain(String(livePlayers.length));
+  });
+
+  it('shows 0 players when backend returns empty array', async () => {
+    const { fetchApiPlayersWithDebug } = await import('../api/client');
+    (fetchApiPlayersWithDebug as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { players: [], liveData: true, total: 0 },
+      debug: { ...debugInfo, playerCount: 0 },
+    });
+    renderDashboard();
+    const panel = await screen.findByTestId('debug-panel');
+    expect(panel.textContent).toContain('0');
+    expect(screen.getByText(/No player data available/)).toBeInTheDocument();
+    // Season highlights should NOT render when 0 players
+    expect(screen.queryByText('Total Goals')).not.toBeInTheDocument();
+  });
+
+  it('has a debug mode toggle for /api/debug/players', async () => {
+    renderDashboard();
+    await screen.findByText('EFL League Two Players');
+    const toggle = screen.getByLabelText('Toggle debug endpoint');
+    expect(toggle).toBeInTheDocument();
   });
 });

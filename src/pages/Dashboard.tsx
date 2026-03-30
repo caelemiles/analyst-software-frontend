@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import PlayerCard from '../components/PlayerCard';
 import PlayerSearch from '../components/PlayerSearch';
-import { fetchPlayers, fetchPlayersPaginated, fetchApiPlayers } from '../api/client';
+import { fetchApiPlayersWithDebug } from '../api/client';
 import { useCurrentSeason } from '../hooks/useCurrentSeason';
-import type { Player, PlayerFilters } from '../types';
+import type { Player, PlayerFilters, DebugInfo } from '../types';
 
 const LEAGUES = [
   { id: 'EFL-League-Two', label: 'EFL League Two' },
@@ -19,11 +19,9 @@ export default function Dashboard() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [lastLoadedPage, setLastLoadedPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const [selectedLeague, setSelectedLeague] = useState('EFL-League-Two');
-  const playersPerPage = 20;
+  const [debugMode, setDebugMode] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
   const [filters, setFilters] = useState<PlayerFilters>({
     search: '',
     team: '',
@@ -39,68 +37,33 @@ export default function Dashboard() {
     async function loadPlayers() {
       setLoading(true);
       setError(null);
-      setLastLoadedPage(1);
-      try {
-        console.log("➡️ Fetching players...");
-        const response = await fetchApiPlayers({ league: selectedLeague, season });
-        if (!cancelled) {
-          if (!response.players || response.players.length === 0) {
-            throw new Error("No live players received");
-          }
-          console.log("📊 Players received:", response.players.length);
-          setPlayers(response.players);
-          setHasMore(false);
-        }
-      } catch (err) {
-        console.error("❌ FRONTEND ERROR:", err);
-        try {
-          const data = await fetchPlayers();
-          if (!cancelled) {
-            if (!data || data.length === 0) {
-              throw new Error("No live players received");
-            }
-            console.log("📊 Players received:", data.length);
-            setPlayers(data);
-            setHasMore(false);
-          }
-        } catch (fallbackErr) {
-          console.error("❌ FRONTEND ERROR:", fallbackErr);
-          if (!cancelled) {
-            setPlayers([]);
-            setHasMore(false);
-            setError('Failed to fetch live player data. Please check the backend connection.');
-          }
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+      console.log(`➡️ Fetching players (debugMode: ${debugMode})...`);
+
+      const { data, debug } = await fetchApiPlayersWithDebug(
+        { league: selectedLeague, season },
+        debugMode,
+      );
+
+      if (cancelled) return;
+
+      setDebugInfo(debug);
+
+      if (debug.error) {
+        setPlayers([]);
+        setError(`Backend error: ${debug.error}`);
+      } else if (data.players.length === 0) {
+        setPlayers([]);
+        setError(null); // Not an error — backend returned an empty array honestly
+      } else {
+        console.log(`📊 Players received: ${data.players.length}`);
+        setPlayers(data.players);
       }
+
+      setLoading(false);
     }
     loadPlayers();
     return () => { cancelled = true; };
-  }, [selectedLeague, season]);
-
-  const loadMore = async () => {
-    if (loadingMore || !hasMore) return;
-    setLoadingMore(true);
-    try {
-      const nextPage = lastLoadedPage + 1;
-      const data = await fetchPlayersPaginated(selectedLeague, nextPage, playersPerPage, season);
-      setPlayers((prev) => {
-        const existingIds = new Set(prev.map((p) => p.id));
-        const newPlayers = data.players.filter((p) => !existingIds.has(p.id));
-        return [...prev, ...newPlayers];
-      });
-      setLastLoadedPage(nextPage);
-      setHasMore(data.page < data.totalPages);
-    } catch (err) {
-      console.error("Player data fetch failed", err);
-      setHasMore(false);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
+  }, [selectedLeague, season, debugMode]);
 
   const teams = useMemo(
     () => [...new Set(players.map((p) => p.team))].sort(),
@@ -162,6 +125,39 @@ export default function Dashboard() {
 
   return (
     <div>
+      {/* Debug Panel */}
+      <div data-testid="debug-panel" className="mb-6 rounded-xl bg-slate-900 border border-yellow-500/40 px-5 py-4 font-mono text-xs">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-yellow-400 font-bold text-sm">🔍 Debug Panel</span>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <span className="text-slate-400">Test mode (/api/debug/players)</span>
+            <input
+              type="checkbox"
+              checked={debugMode}
+              onChange={(e) => setDebugMode(e.target.checked)}
+              className="accent-yellow-500"
+              aria-label="Toggle debug endpoint"
+            />
+          </label>
+        </div>
+        {debugInfo && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-slate-300">
+            <div><span className="text-slate-500">URL:</span> {debugInfo.url}</div>
+            <div><span className="text-slate-500">Status:</span> {debugInfo.status ?? 'N/A'} {debugInfo.statusText}</div>
+            <div><span className="text-slate-500">Fetch time:</span> {debugInfo.fetchTime}</div>
+            <div>
+              <span className="text-slate-500">Players returned by backend:</span>{' '}
+              <span className={debugInfo.playerCount === 0 ? 'text-red-400 font-bold' : 'text-emerald-400 font-bold'}>
+                {debugInfo.playerCount}
+              </span>
+            </div>
+            {debugInfo.error && (
+              <div className="col-span-full text-red-400"><span className="text-slate-500">Error:</span> {debugInfo.error}</div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Season Banner */}
       <div className="mb-6 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/20 px-5 py-3 flex items-center gap-3">
         <span className="text-indigo-400 text-lg">📅</span>
@@ -193,7 +189,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Season Highlights Summary */}
+      {/* Season Highlights Summary — only when players exist */}
       {players.length > 0 && (
         <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="glass rounded-xl p-4 text-center">
@@ -266,24 +262,6 @@ export default function Dashboard() {
               <PlayerCard key={player.id} player={player} />
             ))}
           </div>
-          {hasMore && (
-            <div className="mt-6 flex justify-center">
-              <button
-                onClick={loadMore}
-                disabled={loadingMore}
-                className="px-6 py-2.5 rounded-lg text-sm font-medium gradient-accent text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-              >
-                {loadingMore ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Loading more players...
-                  </span>
-                ) : (
-                  'Load More Players'
-                )}
-              </button>
-            </div>
-          )}
           <div className="mt-4 text-center text-sm text-slate-500">
             Showing {filteredPlayers.length} players
           </div>

@@ -1,4 +1,4 @@
-import type { Player, PaginatedPlayersResponse, Team, LeagueEntry, SeasonInfo, ApiPlayersResponse } from '../types';
+import type { Player, PaginatedPlayersResponse, Team, LeagueEntry, SeasonInfo, ApiPlayersResponse, DebugInfo } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -158,6 +158,72 @@ export async function updatePlayerNotes(id: number, notes: string): Promise<Play
     method: 'POST',
     body: JSON.stringify({ notes }),
   });
+}
+
+/**
+ * Fetch players from /api/players (or /api/debug/players in test mode)
+ * and return both the data and full debug info for the debug panel.
+ */
+export async function fetchApiPlayersWithDebug(
+  params?: {
+    league?: string;
+    season?: string;
+  },
+  useDebugEndpoint = false,
+): Promise<{ data: ApiPlayersResponse; debug: DebugInfo }> {
+  const query = new URLSearchParams();
+  if (params?.league) query.set('league', params.league);
+  if (params?.season) query.set('season', params.season);
+  const qs = query.toString();
+  const basePath = useDebugEndpoint ? '/api/debug/players' : '/api/players';
+  const endpoint = `${basePath}${qs ? `?${qs}` : ''}`;
+  const url = `${API_BASE_URL}${endpoint}`;
+
+  const debug: DebugInfo = {
+    url,
+    status: null,
+    statusText: '',
+    fetchTime: new Date().toISOString(),
+    playerCount: 0,
+    error: null,
+  };
+
+  try {
+    console.log(`[DEBUG] Fetching: ${url}`);
+    const response = await fetch(url, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    debug.status = response.status;
+    debug.statusText = response.statusText;
+    console.log(`[DEBUG] Response: ${response.status} ${response.statusText}`);
+
+    if (!response.ok) {
+      debug.error = `HTTP ${response.status} ${response.statusText}`;
+      throw new Error(debug.error);
+    }
+
+    const raw = await response.json() as { players: RawPlayer[]; liveData: boolean; total: number };
+    const players = Array.isArray(raw.players) ? raw.players : [];
+    debug.playerCount = players.length;
+    console.log(`[DEBUG] Parsed JSON payload: ${players.length} players (liveData: ${raw.liveData})`);
+
+    return {
+      data: {
+        players: normalizePlayers(players),
+        liveData: raw.liveData ?? false,
+        total: raw.total ?? players.length,
+      },
+      debug,
+    };
+  } catch (err) {
+    debug.error = debug.error ?? (err instanceof Error ? err.message : String(err));
+    console.error(`[DEBUG] Fetch failed for ${url}:`, err);
+    return {
+      data: { players: [], liveData: false, total: 0 },
+      debug,
+    };
+  }
 }
 
 export async function exportPortfolio(playerIds: number[]): Promise<Blob> {

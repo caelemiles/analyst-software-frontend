@@ -144,3 +144,12 @@ export interface ApiPlayersResponse {
   liveData: boolean;
   total: number;
 }
+
+export interface DebugInfo {
+  url: string;
+  status: number | null;
+  statusText: string;
+  fetchTime: string;
+  playerCount: number;
+  error: string | null;
+}
