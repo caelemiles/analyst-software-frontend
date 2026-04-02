@@ -225,8 +225,10 @@ export async function fetchApiPlayersWithDebug(
 
     const text = await response.text();
     debug.rawBodyLength = text.length;
+    debug.rawBodyPreview = text.substring(0, 500);
 
     const json = JSON.parse(text);
+    debug.rawJsonObject = json;
 
     if (useDebugEndpoint) {
       // /api/debug/players returns a raw array of player rows (not wrapped)
