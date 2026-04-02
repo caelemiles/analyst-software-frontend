@@ -153,5 +153,7 @@ export interface DebugInfo {
   playerCount: number;
   error: string | null;
   rawBodyLength?: number;
+  rawBodyPreview?: string;
+  rawJsonObject?: unknown;
   rawPlayerNames?: string[];
 }

@@ -164,6 +164,8 @@ describe('Dashboard', () => {
         playerCount: livePlayers.length,
         error: null,
         rawBodyLength: 500,
+        rawBodyPreview: '[{"id":1,"name":"Player 1"}]',
+        rawJsonObject: [{ id: 1, name: 'Player 1' }],
         rawPlayerNames: ['Player 1', 'Player 2'],
       },
     });
@@ -191,5 +193,43 @@ describe('Dashboard', () => {
     // League selector and season highlights should be hidden
     expect(screen.queryByLabelText('League')).not.toBeInTheDocument();
     expect(screen.queryByText('Total Goals')).not.toBeInTheDocument();
+
+    // Raw body preview should be shown with prettified JSON
+    const rawPreview = screen.getByTestId('raw-body-preview');
+    expect(rawPreview).toBeInTheDocument();
+    expect(rawPreview.textContent).toContain('"id": 1');
+    expect(rawPreview.textContent).toContain('"name": "Player 1"');
+  });
+
+  it('shows full structured object in debug panel when backend returns { liveData, players }', async () => {
+    const user = userEvent.setup();
+    const { fetchApiPlayersWithDebug } = await import('../api/client');
+
+    const structuredObj = { liveData: false, players: [] };
+    (fetchApiPlayersWithDebug as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { players: [], liveData: false, total: 0 },
+      debug: {
+        url: 'http://localhost:8000/api/debug/players',
+        status: 200,
+        statusText: 'OK',
+        fetchTime: '2026-01-01T00:00:00.000Z',
+        playerCount: 0,
+        error: null,
+        rawBodyLength: 35,
+        rawBodyPreview: '{"liveData":false,"players":[]}',
+        rawJsonObject: structuredObj,
+        rawPlayerNames: [],
+      },
+    });
+
+    renderDashboard();
+    await screen.findByText('EFL League Two Players');
+    const toggle = screen.getByLabelText('Toggle debug endpoint');
+    await user.click(toggle);
+
+    await screen.findByText('Debug Mode — Raw Player Rows');
+    const rawPreview = screen.getByTestId('raw-body-preview');
+    expect(rawPreview.textContent).toContain('"liveData": false');
+    expect(rawPreview.textContent).toContain('"players": []');
   });
 });
