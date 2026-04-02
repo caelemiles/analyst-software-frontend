@@ -156,4 +156,10 @@ export interface DebugInfo {
   rawBodyPreview?: string;
   rawJsonObject?: unknown;
   rawPlayerNames?: string[];
+  /** Whether the top-level JSON response is an array, object, or other */
+  responseShape?: 'array' | 'object' | 'other';
+  /** Top-level keys when response is an object */
+  topLevelKeys?: string[];
+  /** Count of items in the nested `players` array when response is an object */
+  nestedPlayersCount?: number;
 }

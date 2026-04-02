@@ -230,6 +230,20 @@ export async function fetchApiPlayersWithDebug(
     const json = JSON.parse(text);
     debug.rawJsonObject = json;
 
+    // Analyze response shape
+    if (Array.isArray(json)) {
+      debug.responseShape = 'array';
+    } else if (json && typeof json === 'object') {
+      debug.responseShape = 'object';
+      debug.topLevelKeys = Object.keys(json);
+      const nestedPlayers = (json as Record<string, unknown>).players;
+      if (Array.isArray(nestedPlayers)) {
+        debug.nestedPlayersCount = nestedPlayers.length;
+      }
+    } else {
+      debug.responseShape = 'other';
+    }
+
     if (useDebugEndpoint) {
       // /api/debug/players returns a raw array of player rows (not wrapped)
       const rows = extractPlayerRows(json);
