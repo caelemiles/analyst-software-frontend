@@ -173,7 +173,7 @@ export default function Dashboard() {
                   data-testid="raw-body-preview"
                   className="mt-1 p-3 rounded-lg bg-slate-950 border border-slate-700 text-green-300 text-xs whitespace-pre-wrap break-all max-h-60 overflow-auto"
                 >{debugInfo.rawJsonObject != null
-                  ? JSON.stringify(debugInfo.rawJsonObject, null, 2).substring(0, 500)
+                  ? JSON.stringify(debugInfo.rawJsonObject, null, 2)
                   : debugInfo.rawBodyPreview}</pre>
               </div>
             )}
