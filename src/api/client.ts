@@ -236,8 +236,9 @@ export async function fetchApiPlayersWithDebug(
     } else if (json && typeof json === 'object') {
       debug.responseShape = 'object';
       debug.topLevelKeys = Object.keys(json);
-      if (Array.isArray((json as Record<string, unknown>).players)) {
-        debug.nestedPlayersCount = (json as { players: unknown[] }).players.length;
+      const nestedPlayers = (json as Record<string, unknown>).players;
+      if (Array.isArray(nestedPlayers)) {
+        debug.nestedPlayersCount = nestedPlayers.length;
       }
     } else {
       debug.responseShape = 'other';
