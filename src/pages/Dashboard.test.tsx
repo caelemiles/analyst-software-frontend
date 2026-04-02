@@ -146,7 +146,7 @@ describe('Dashboard', () => {
     expect(toggle).toBeInTheDocument();
     // In normal mode, label shows "Normal mode (/api/players)"
     const panel = screen.getByTestId('debug-panel');
-    expect(panel.textContent).toContain('Normal mode (/api/players)');
+    expect(panel.textContent).toContain('Normal mode');
   });
 
   it('calls /api/debug/players with no params when debug mode is toggled on', async () => {
@@ -183,7 +183,7 @@ describe('Dashboard', () => {
 
     // Debug panel shows "Debug mode ON"
     const panel = screen.getByTestId('debug-panel');
-    expect(panel.textContent).toContain('Debug mode ON (/api/debug/players)');
+    expect(panel.textContent).toContain('Debug mode ON');
     expect(panel.textContent).toContain('/api/debug/players');
 
     // Raw body length and first player names shown

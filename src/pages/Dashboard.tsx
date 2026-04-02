@@ -129,16 +129,24 @@ export default function Dashboard() {
       <div data-testid="debug-panel" className="mb-6 rounded-xl bg-slate-900 border border-yellow-500/40 px-5 py-4 font-mono text-xs">
         <div className="flex items-center justify-between mb-2">
           <span className="text-yellow-400 font-bold text-sm">🔍 Debug Panel</span>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <span className="text-slate-400">{debugMode ? 'Debug mode ON (/api/debug/players)' : 'Normal mode (/api/players)'}</span>
-            <input
-              type="checkbox"
-              checked={debugMode}
-              onChange={(e) => setDebugMode(e.target.checked)}
-              className="accent-yellow-500"
-              aria-label="Toggle debug endpoint"
+          <button
+            type="button"
+            onClick={() => setDebugMode((prev) => !prev)}
+            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 ${debugMode ? 'bg-yellow-500' : 'bg-slate-600'}`}
+            aria-label="Toggle debug endpoint"
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${debugMode ? 'translate-x-8' : 'translate-x-1'}`}
             />
-          </label>
+          </button>
+        </div>
+        <div className="mb-2 text-sm">
+          <span className={debugMode ? 'text-yellow-300 font-bold' : 'text-slate-400'}>
+            {debugMode ? '⚡ Debug mode ON' : 'Normal mode'}
+          </span>
+          <span className="text-slate-500 ml-2">
+            → {debugMode ? '/api/debug/players (no filters)' : `/api/players?league=${selectedLeague}&season=${season}`}
+          </span>
         </div>
         {debugInfo && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-slate-300">
@@ -157,6 +165,25 @@ export default function Dashboard() {
                 <span className="text-amber-300">{debugInfo.rawBodyLength} chars</span>
               </div>
             )}
+            {debugInfo.responseShape && (
+              <div>
+                <span className="text-slate-500">Response shape:</span>{' '}
+                <span className="text-purple-300 font-bold">{debugInfo.responseShape}</span>
+                {debugInfo.responseShape === 'object' && debugInfo.topLevelKeys && (
+                  <span className="text-slate-400 ml-1">
+                    (keys: {debugInfo.topLevelKeys.join(', ')})
+                  </span>
+                )}
+              </div>
+            )}
+            {debugInfo.responseShape === 'object' && debugInfo.nestedPlayersCount !== undefined && (
+              <div>
+                <span className="text-slate-500">Nested players[] count:</span>{' '}
+                <span className={debugInfo.nestedPlayersCount === 0 ? 'text-red-400 font-bold' : 'text-emerald-400 font-bold'}>
+                  {debugInfo.nestedPlayersCount}
+                </span>
+              </div>
+            )}
             {debugInfo.rawPlayerNames && debugInfo.rawPlayerNames.length > 0 && (
               <div>
                 <span className="text-slate-500">First players:</span>{' '}
@@ -168,7 +195,9 @@ export default function Dashboard() {
             )}
             {debugInfo.rawBodyPreview !== undefined && (
               <div className="col-span-full mt-2">
-                <span className="text-slate-500">Raw response body (first 500 chars):</span>
+                <span className="text-slate-500">
+                  {debugInfo.rawJsonObject != null ? 'Full raw response body (prettified):' : 'Raw response body (first 500 chars):'}
+                </span>
                 <pre
                   data-testid="raw-body-preview"
                   className="mt-1 p-3 rounded-lg bg-slate-950 border border-slate-700 text-green-300 text-xs whitespace-pre-wrap break-all max-h-60 overflow-auto"
