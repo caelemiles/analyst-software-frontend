@@ -529,3 +529,81 @@ export async function getLastUpdateTime(season: string): Promise<Date | null> {
   );
   return result.rows[0]?.last_updated ?? null;
 }
+
+/**
+ * Minimal player query — returns only id, name, team, league, season.
+ * No joins, no formatting, no computed fields. Only uses columns confirmed
+ * to exist via information_schema.
+ */
+export async function getPlayersMinimal(limit = 50): Promise<Record<string, unknown>[]> {
+  const db = getPool();
+  const cols = await getTableColumns('players');
+  const minimal = ['id', 'name', 'team'].filter(c => cols.includes(c));
+  if (cols.includes('league')) minimal.push('league');
+  if (cols.includes('season')) minimal.push('season');
+  if (cols.includes('position')) minimal.push('position');
+  if (cols.includes('age')) minimal.push('age');
+  if (cols.includes('goals')) minimal.push('goals');
+  if (cols.includes('assists')) minimal.push('assists');
+  if (cols.includes('appearances')) minimal.push('appearances');
+
+  const selectCols = minimal.length > 0 ? minimal.join(', ') : '*';
+  const result = await db.query(
+    `SELECT ${selectCols} FROM players ORDER BY id ASC LIMIT $1`,
+    [limit]
+  );
+  return result.rows;
+}
+
+/**
+ * Get player counts grouped by league, season, and source.
+ * Uses only columns confirmed to exist via information_schema.
+ */
+export async function getPlayerCounts(): Promise<{
+  total: number;
+  byLeague: Record<string, number>;
+  bySeason: Record<string, number>;
+  bySource: Record<string, number>;
+}> {
+  const db = getPool();
+  const cols = await getTableColumns('players');
+
+  // Total count
+  const totalResult = await db.query<{ count: string }>('SELECT COUNT(*) as count FROM players');
+  const total = parseInt(totalResult.rows[0].count, 10);
+
+  // Group by league
+  const byLeague: Record<string, number> = {};
+  if (cols.includes('league')) {
+    const leagueResult = await db.query<{ league: string; count: string }>(
+      'SELECT league, COUNT(*) as count FROM players GROUP BY league ORDER BY count DESC'
+    );
+    for (const row of leagueResult.rows) {
+      byLeague[row.league ?? 'NULL'] = parseInt(row.count, 10);
+    }
+  }
+
+  // Group by season
+  const bySeason: Record<string, number> = {};
+  if (cols.includes('season')) {
+    const seasonResult = await db.query<{ season: string; count: string }>(
+      'SELECT season, COUNT(*) as count FROM players GROUP BY season ORDER BY count DESC'
+    );
+    for (const row of seasonResult.rows) {
+      bySeason[row.season ?? 'NULL'] = parseInt(row.count, 10);
+    }
+  }
+
+  // Group by source
+  const bySource: Record<string, number> = {};
+  if (cols.includes('source')) {
+    const sourceResult = await db.query<{ source: string; count: string }>(
+      'SELECT source, COUNT(*) as count FROM players GROUP BY source ORDER BY count DESC'
+    );
+    for (const row of sourceResult.rows) {
+      bySource[row.source ?? 'NULL'] = parseInt(row.count, 10);
+    }
+  }
+
+  return { total, byLeague, bySeason, bySource };
+}

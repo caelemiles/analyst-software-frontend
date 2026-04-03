@@ -29,66 +29,91 @@ export async function runScrape(): Promise<ScrapeResult> {
   let teamsUpserted = 0;
   let playersUpserted = 0;
 
+  console.log('═══════════════════════════════════════════════════════');
   console.log('🚀 SCRAPER STARTED');
-  console.log(`[Scraper] Starting scrape for ${LEAGUE_NAME} season ${CURRENT_SEASON}...`);
+  console.log(`[Scraper] League: ${LEAGUE_NAME}`);
+  console.log(`[Scraper] Season: ${CURRENT_SEASON}`);
+  console.log(`[Scraper] Time: ${new Date().toISOString()}`);
+  console.log('═══════════════════════════════════════════════════════');
 
   try {
-    // Fetch data from FotMob
+    // STAGE 1: Fetch data from FotMob API
+    console.log('[Scraper] [STAGE 1/4] Fetching data from FotMob API...');
+    const fetchStart = Date.now();
     const { teams, players } = await scrapeLeague(LEAGUE_NAME);
-
-    console.log(`📥 Scraped players count: ${players.length}`);
+    const fetchDuration = ((Date.now() - fetchStart) / 1000).toFixed(1);
+    console.log(`[Scraper] [STAGE 1/4] API fetch complete in ${fetchDuration}s`);
+    console.log(`[Scraper]   📥 Teams fetched: ${teams.length}`);
+    console.log(`[Scraper]   📥 Players fetched: ${players.length}`);
 
     if (teams.length === 0) {
-      console.error(`[ERROR] API Football: No team data returned for ${LEAGUE_NAME}`);
+      console.error(`[Scraper] ❌ WARNING: No team data returned for ${LEAGUE_NAME}`);
     }
     if (players.length === 0) {
-      console.log('❌ SCRAPER RETURNED 0 PLAYERS');
-      if (teams.length > 0) {
-        console.error(`[ERROR] API Football: Player data missing for ${LEAGUE_NAME}`);
-      }
+      console.error(`[Scraper] ❌ WARNING: No player data returned for ${LEAGUE_NAME}`);
     }
 
-    // Upsert teams
+    // STAGE 2: Upsert teams into database
+    console.log('[Scraper] [STAGE 2/4] Inserting/updating teams in database...');
     for (const team of teams) {
       try {
         const normalized = normalizeTeamData(team, CURRENT_SEASON, LEAGUE_NAME);
         await upsertTeam(normalized);
         teamsUpserted++;
-        console.log(`[INFO] Scraper: Team ${team.name} inserted/updated successfully`);
+        console.log(`[Scraper]   ✅ Team upserted: ${team.name} (${teamsUpserted}/${teams.length})`);
       } catch (error) {
         const msg = `Failed to upsert team ${team.name}: ${error instanceof Error ? error.message : String(error)}`;
-        console.error(`[ERROR] Database: ${msg}`);
+        console.error(`[Scraper]   ❌ ${msg}`);
         errors.push(msg);
       }
     }
+    console.log(`[Scraper] [STAGE 2/4] Teams complete: ${teamsUpserted} upserted, ${errors.length} errors`);
 
-    // Upsert players
-    console.log('💾 Inserting players into DB...');
+    // STAGE 3: Upsert players into database
+    console.log('[Scraper] [STAGE 3/4] Inserting/updating players in database...');
     for (const player of players) {
       try {
-        console.log(`➡️ Inserting: ${player.name}`);
         const normalized = normalizePlayerData(player, CURRENT_SEASON, LEAGUE_NAME);
         await upsertPlayer(normalized);
         playersUpserted++;
-        console.log(`[INFO] Scraper: Player ${player.name} inserted/updated successfully`);
+        if (playersUpserted % 25 === 0 || playersUpserted === players.length) {
+          console.log(`[Scraper]   💾 Players progress: ${playersUpserted}/${players.length} upserted`);
+        }
       } catch (error) {
         const msg = `Failed to upsert player ${player.name}: ${error instanceof Error ? error.message : String(error)}`;
-        console.error(`[ERROR] Database: ${msg}`);
+        console.error(`[Scraper]   ❌ ${msg}`);
         errors.push(msg);
       }
     }
+    console.log(`[Scraper] [STAGE 3/4] Players complete: ${playersUpserted} upserted, ${errors.length} total errors`);
 
-    // Verify total players in DB after insert
+    // STAGE 4: Verify data in database
+    console.log('[Scraper] [STAGE 4/4] Verifying data in database...');
     try {
       const db = getPool();
-      const check = await db.query('SELECT COUNT(*) FROM players');
-      console.log(`📊 TOTAL PLAYERS IN DB: ${check.rows[0].count}`);
+      const totalCheck = await db.query('SELECT COUNT(*) as count FROM players');
+      const seasonCheck = await db.query(
+        'SELECT COUNT(*) as count FROM players WHERE season = $1',
+        [CURRENT_SEASON]
+      );
+      const leagueCheck = await db.query(
+        'SELECT COUNT(*) as count FROM players WHERE league = $1 AND season = $2',
+        [LEAGUE_NAME, CURRENT_SEASON]
+      );
+      console.log(`[Scraper]   📊 Total players in DB: ${totalCheck.rows[0].count}`);
+      console.log(`[Scraper]   📊 Players for season ${CURRENT_SEASON}: ${seasonCheck.rows[0].count}`);
+      console.log(`[Scraper]   📊 Players for ${LEAGUE_NAME} ${CURRENT_SEASON}: ${leagueCheck.rows[0].count}`);
     } catch (dbErr) {
-      console.error('❌ Failed to verify player count in DB:', dbErr);
+      console.error(`[Scraper]   ❌ Failed to verify player count: ${dbErr instanceof Error ? dbErr.message : String(dbErr)}`);
     }
 
     const duration = (Date.now() - startTime) / 1000;
-    console.log(`[Scraper] Scrape complete in ${duration.toFixed(1)}s: ${teamsUpserted} teams, ${playersUpserted} players upserted`);
+    console.log('═══════════════════════════════════════════════════════');
+    console.log(`✅ SCRAPER FINISHED in ${duration.toFixed(1)}s`);
+    console.log(`   Teams: ${teamsUpserted}/${teams.length} upserted`);
+    console.log(`   Players: ${playersUpserted}/${players.length} upserted`);
+    console.log(`   Errors: ${errors.length}`);
+    console.log('═══════════════════════════════════════════════════════');
 
     return {
       success: errors.length === 0,
@@ -99,7 +124,10 @@ export async function runScrape(): Promise<ScrapeResult> {
     };
   } catch (error) {
     const msg = `Scrape failed: ${error instanceof Error ? error.message : String(error)}`;
-    console.error(`[ERROR] Scraper: ${msg}`);
+    console.error(`[Scraper] ❌ FATAL: ${msg}`);
+    if (error instanceof Error && error.stack) {
+      console.error(`[Scraper]   Stack: ${error.stack}`);
+    }
     errors.push(msg);
 
     return {
