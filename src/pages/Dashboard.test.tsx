@@ -7,6 +7,10 @@ import Dashboard from './Dashboard';
 vi.mock('../api/client', () => ({
   fetchApiPlayersWithDebug: vi.fn(),
   fetchCurrentSeason: vi.fn(),
+  DEBUG_ENDPOINTS: [
+    { value: '/api/debug/players', label: '/api/debug/players' },
+    { value: '/api/players-minimal', label: '/api/players-minimal' },
+  ],
 }));
 
 const stats = {
@@ -175,8 +179,8 @@ describe('Dashboard', () => {
     const toggle = screen.getByLabelText('Toggle debug endpoint');
     await user.click(toggle);
 
-    // Should call with undefined params and useDebugEndpoint=true
-    expect(fetchApiPlayersWithDebug).toHaveBeenCalledWith(undefined, true);
+    // Should call with undefined params and the debug endpoint path
+    expect(fetchApiPlayersWithDebug).toHaveBeenCalledWith(undefined, '/api/debug/players');
 
     // Debug mode heading appears
     await screen.findByText('Debug Mode — Raw Player Rows');
