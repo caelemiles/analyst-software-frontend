@@ -107,7 +107,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const formatted = players.map(playerRowToApiFormat);
+    const formatted = players.map((p) => playerRowToApiFormat(p as unknown as Record<string, unknown>));
     console.log(`[API]   ✅ Sending ${formatted.length} players to frontend`);
 
     // If pagination was requested, return paginated response

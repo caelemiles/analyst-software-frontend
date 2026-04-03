@@ -4,7 +4,7 @@ import { config } from './config.js';
 import { initDatabase, validateSchema, getTableColumns, EXPECTED_PLAYER_COLUMNS, EXPECTED_TEAM_COLUMNS } from './db/connection.js';
 import { startScheduler, triggerScrape } from './scheduler/index.js';
 import { needsInitialScrape, runScrape, CURRENT_SEASON, LEAGUE_NAME } from './scraper/index.js';
-import { getLastUpdateTime, getPlayers, upsertPlayer } from './db/queries.js';
+import { getLastUpdateTime, getPlayers, getPlayersSafe, upsertPlayer, invalidatePlayerColumnsCache } from './db/queries.js';
 
 import playersRouter from './routes/players.js';
 import teamsRouter from './routes/teams.js';
@@ -44,7 +44,7 @@ app.get('/players', async (req, res) => {
     const { getPlayers } = await import('./db/queries.js');
     const { playerRowToApiFormat } = await import('./scraper/normalize.js');
     const { players } = await getPlayers({ league, season });
-    res.json(players.map(playerRowToApiFormat));
+    res.json(players.map((p) => playerRowToApiFormat(p as unknown as Record<string, unknown>)));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[API] Error in legacy /players: ${message}`);
@@ -63,7 +63,7 @@ app.get('/player/:id', async (req, res) => {
       res.status(404).json({ error: 'Player not found' });
       return;
     }
-    res.json(playerRowToApiFormat(player));
+    res.json(playerRowToApiFormat(player as unknown as Record<string, unknown>));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[API] Error in /player/:id: ${message}`);
@@ -78,7 +78,7 @@ app.get('/api/league/:leagueId/players', async (req, res) => {
     const { getPlayers } = await import('./db/queries.js');
     const { playerRowToApiFormat } = await import('./scraper/normalize.js');
     const { players } = await getPlayers({ league, season: CURRENT_SEASON });
-    res.json(players.map(playerRowToApiFormat));
+    res.json(players.map((p) => playerRowToApiFormat(p as unknown as Record<string, unknown>)));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[API] Error in /api/league/:leagueId/players: ${message}`);
@@ -98,16 +98,43 @@ app.post('/api/scrape', async (_req, res) => {
   }
 });
 
-// Debug route — returns first 20 players directly from DB for troubleshooting (no league/season filter)
+// Debug route — returns first 20 players using ONLY columns confirmed to exist (no SELECT *, no joins)
 app.get('/api/debug/players', async (_req, res) => {
   try {
-    const { players } = await getPlayers({ limit: 20 });
-    console.log(`[Debug] /api/debug/players returning ${players.length} players`);
+    // Use the truly safe query — discovers columns from information_schema first
+    const players = await getPlayersSafe(20);
+    console.log(`[Debug] /api/debug/players returning ${players.length} players (safe query)`);
     res.json(players);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[Debug] Error in /api/debug/players: ${message}`);
     res.json({ error: message, players: [] });
+  }
+});
+
+// Debug route — ultra-minimal query returning only id, name, team + whatever of league/season exist
+app.get('/api/debug/players-safe', async (_req, res) => {
+  try {
+    const db = (await import('./db/connection.js')).getPool();
+    const cols = await getTableColumns('players');
+    // Pick only the minimal subset that we are 100% sure exists
+    const minimal = ['id', 'name', 'team'].filter(c => cols.includes(c));
+    // Add league and season if they exist
+    if (cols.includes('league')) minimal.push('league');
+    if (cols.includes('season')) minimal.push('season');
+    const selectCols = minimal.length > 0 ? minimal.join(', ') : '*';
+    const result = await db.query(`SELECT ${selectCols} FROM players LIMIT 20`);
+    res.json({
+      actual_columns: cols,
+      selected_columns: minimal,
+      total_columns: cols.length,
+      rows: result.rows,
+      count: result.rows.length,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[Debug] Error in /api/debug/players-safe: ${message}`);
+    res.json({ error: message, actual_columns: [], rows: [] });
   }
 });
 
@@ -255,9 +282,12 @@ app.get('/api/health', async (_req, res) => {
 // Start server
 async function start(): Promise<void> {
   try {
-    // Initialize database
+    // Initialize database (includes ALTER TABLE migrations for missing columns)
     console.log('[Server] Initializing database...');
     await initDatabase();
+
+    // Invalidate column cache after migrations so queries see the updated schema
+    invalidatePlayerColumnsCache();
 
     // Validate that the DB schema matches expected columns
     console.log('[Server] Validating database schema...');
@@ -303,7 +333,8 @@ async function start(): Promise<void> {
       console.log(`  GET  /api/teams          — All teams with squads`);
       console.log(`  GET  /api/league-table   — League standings`);
       console.log(`  GET  /api/season         — Current season info`);
-      console.log(`  GET  /api/debug/players     — Debug: first 20 players from DB`);
+      console.log(`  GET  /api/debug/players     — Debug: first 20 players (schema-safe)`);
+      console.log(`  GET  /api/debug/players-safe — Debug: ultra-minimal query with actual columns`);
       console.log(`  GET  /api/debug/schema      — Debug: compare DB vs expected schema`);
       console.log(`  GET  /api/debug/query-test  — Debug: verify team column access`);
       console.log(`  POST /api/debug/seed        — Seed 3 test League Two players`);

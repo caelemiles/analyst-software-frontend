@@ -1,4 +1,4 @@
-import { getPool } from './connection.js';
+import { getPool, getTableColumns } from './connection.js';
 
 export interface PlayerRow {
   id: number;
@@ -39,6 +39,99 @@ export interface PlayerRow {
   notes: string;
   ai_summary: string;
   last_updated: Date;
+}
+
+/**
+ * Cached set of actual player column names from information_schema.
+ * Refreshed on first access and on cache miss.
+ */
+let _playerColumnsCache: Set<string> | null = null;
+let _playerColumnsCacheTime = 0;
+const COLUMN_CACHE_TTL_MS = 60_000; // 1 minute
+
+async function getPlayerColumnsSet(): Promise<Set<string>> {
+  const now = Date.now();
+  if (_playerColumnsCache && now - _playerColumnsCacheTime < COLUMN_CACHE_TTL_MS) {
+    return _playerColumnsCache;
+  }
+  const cols = await getTableColumns('players');
+  _playerColumnsCache = new Set(cols);
+  _playerColumnsCacheTime = now;
+  return _playerColumnsCache;
+}
+
+/**
+ * Invalidate the cached column set (e.g. after running migrations).
+ */
+export function invalidatePlayerColumnsCache(): void {
+  _playerColumnsCache = null;
+  _playerColumnsCacheTime = 0;
+}
+
+/**
+ * Get a safe, minimal SELECT of only columns that actually exist in the DB.
+ * Falls back to SELECT * if the information_schema query itself fails.
+ */
+async function safeSelectClause(): Promise<string> {
+  try {
+    const existing = await getPlayerColumnsSet();
+    // Always include id, name, team — the true minimal set
+    const desired = [
+      'id', 'api_player_id', 'name', 'team', 'position', 'age', 'nationality',
+      'image_url', 'source', 'appearances', 'goals', 'assists', 'xg', 'xa',
+      'passes_completed', 'pass_accuracy', 'tackles', 'interceptions', 'clearances',
+      'minutes_played', 'rating', 'npxg', 'dribbles', 'key_passes', 'aerial_duels_won',
+      'yellow_cards', 'red_cards', 'fouls_drawn', 'fouls_committed',
+      'saves', 'clean_sheets', 'goals_conceded', 'penalties_saved',
+      'season', 'league', 'notes', 'ai_summary', 'last_updated',
+    ];
+    const safe = desired.filter(c => existing.has(c));
+    if (safe.length === 0) return '*';
+    return safe.join(', ');
+  } catch {
+    return '*';
+  }
+}
+
+/**
+ * Check whether a column actually exists in the players table.
+ */
+async function playerColumnExists(col: string): Promise<boolean> {
+  try {
+    const existing = await getPlayerColumnsSet();
+    return existing.has(col);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get players using only a truly minimal query that cannot fail
+ * even if the table has very few columns. Returns raw rows.
+ */
+export async function getPlayersSafe(limitRows = 20): Promise<Record<string, unknown>[]> {
+  const db = getPool();
+  try {
+    // First discover what columns actually exist
+    const cols = await getTableColumns('players');
+    if (cols.length === 0) {
+      return [];
+    }
+    const selectCols = cols.join(', ');
+    const result = await db.query(
+      `SELECT ${selectCols} FROM players LIMIT $1`,
+      [limitRows]
+    );
+    return result.rows;
+  } catch {
+    // Ultimate fallback: try SELECT * with LIMIT
+    try {
+      const result = await db.query('SELECT * FROM players LIMIT $1', [limitRows]);
+      return result.rows;
+    } catch {
+      return [];
+    }
+  }
 }
 
 export interface TeamRow {
@@ -235,6 +328,8 @@ export async function upsertTeam(data: UpsertTeamData): Promise<TeamRow> {
 
 /**
  * Get all players for a given league and season.
+ * Uses schema-aware queries: only selects and filters on columns that
+ * actually exist in the production database.
  */
 export async function getPlayers(options?: {
   league?: string;
@@ -250,49 +345,69 @@ export async function getPlayers(options?: {
   limit?: number;
 }): Promise<{ players: PlayerRow[]; total: number }> {
   const db = getPool();
+
+  // Build a safe SELECT clause from only columns that exist
+  const selectClause = await safeSelectClause();
+
   const conditions: string[] = [];
   const params: unknown[] = [];
   let paramIdx = 1;
 
-  if (options?.league) {
+  // Only add filter conditions for columns that exist in the actual table
+  if (options?.league && await playerColumnExists('league')) {
     conditions.push(`league = $${paramIdx++}`);
     params.push(options.league);
   }
-  if (options?.season) {
+  if (options?.season && await playerColumnExists('season')) {
     conditions.push(`season = $${paramIdx++}`);
     params.push(options.season);
   }
-  if (options?.team) {
+  if (options?.team && await playerColumnExists('team')) {
     conditions.push(`team = $${paramIdx++}`);
     params.push(options.team);
   }
-  if (options?.position) {
+  if (options?.position && await playerColumnExists('position')) {
     conditions.push(`position = $${paramIdx++}`);
     params.push(options.position);
   }
   if (options?.search) {
-    conditions.push(`(name ILIKE $${paramIdx} OR team ILIKE $${paramIdx})`);
-    params.push(`%${options.search}%`);
-    paramIdx++;
+    const hasName = await playerColumnExists('name');
+    const hasTeam = await playerColumnExists('team');
+    if (hasName && hasTeam) {
+      conditions.push(`(name ILIKE $${paramIdx} OR team ILIKE $${paramIdx})`);
+      params.push(`%${options.search}%`);
+      paramIdx++;
+    } else if (hasName) {
+      conditions.push(`name ILIKE $${paramIdx}`);
+      params.push(`%${options.search}%`);
+      paramIdx++;
+    }
   }
-  if (options?.minAge !== undefined) {
+  if (options?.minAge !== undefined && await playerColumnExists('age')) {
     conditions.push(`age >= $${paramIdx++}`);
     params.push(options.minAge);
   }
-  if (options?.maxAge !== undefined) {
+  if (options?.maxAge !== undefined && await playerColumnExists('age')) {
     conditions.push(`age <= $${paramIdx++}`);
     params.push(options.maxAge);
   }
-  if (options?.minGoals !== undefined) {
+  if (options?.minGoals !== undefined && await playerColumnExists('goals')) {
     conditions.push(`goals >= $${paramIdx++}`);
     params.push(options.minGoals);
   }
-  if (options?.minXG !== undefined) {
+  if (options?.minXG !== undefined && await playerColumnExists('xg')) {
     conditions.push(`xg >= $${paramIdx++}`);
     params.push(options.minXG);
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  // Build safe ORDER BY — only use columns that exist
+  const orderParts: string[] = [];
+  if (await playerColumnExists('goals')) orderParts.push('goals DESC');
+  if (await playerColumnExists('assists')) orderParts.push('assists DESC');
+  if (await playerColumnExists('name')) orderParts.push('name ASC');
+  const orderClause = orderParts.length > 0 ? `ORDER BY ${orderParts.join(', ')}` : '';
 
   // Get total count
   const countResult = await db.query<{ count: string }>(
@@ -302,7 +417,7 @@ export async function getPlayers(options?: {
   const total = parseInt(countResult.rows[0].count, 10);
 
   // Get paginated results
-  let query = `SELECT * FROM players ${whereClause} ORDER BY goals DESC, assists DESC, name ASC`;
+  let query = `SELECT ${selectClause} FROM players ${whereClause} ${orderClause}`;
   const queryParams = [...params];
 
   if (options?.limit) {
@@ -353,6 +468,7 @@ export async function getTeams(options?: {
  */
 export async function getTeamPlayers(teamId: number, season?: string): Promise<PlayerRow[]> {
   const db = getPool();
+  const selectClause = await safeSelectClause();
 
   // First get the team name
   const teamResult = await db.query<TeamRow>(
@@ -367,13 +483,19 @@ export async function getTeamPlayers(teamId: number, season?: string): Promise<P
   const conditions = ['team = $1'];
   const params: unknown[] = [teamName];
 
-  if (season) {
+  if (season && await playerColumnExists('season')) {
     conditions.push('season = $2');
     params.push(season);
   }
 
+  // Build safe ORDER BY
+  const orderParts: string[] = [];
+  if (await playerColumnExists('goals')) orderParts.push('goals DESC');
+  if (await playerColumnExists('name')) orderParts.push('name ASC');
+  const orderClause = orderParts.length > 0 ? `ORDER BY ${orderParts.join(', ')}` : '';
+
   const result = await db.query<PlayerRow>(
-    `SELECT * FROM players WHERE ${conditions.join(' AND ')} ORDER BY goals DESC, name ASC`,
+    `SELECT ${selectClause} FROM players WHERE ${conditions.join(' AND ')} ${orderClause}`,
     params
   );
   return result.rows;

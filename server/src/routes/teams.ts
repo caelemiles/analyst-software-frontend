@@ -27,12 +27,12 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
         const squad = players.map((p) => ({
           id: p.id,
           name: p.name,
-          position: p.position,
-          age: p.age,
-          nationality: p.nationality,
-          appearances: Number(p.appearances),
-          goals: Number(p.goals),
-          assists: Number(p.assists),
+          position: p.position ?? 'Unknown',
+          age: p.age ?? 0,
+          nationality: p.nationality ?? 'Unknown',
+          appearances: Number(p.appearances ?? 0),
+          goals: Number(p.goals ?? 0),
+          assists: Number(p.assists ?? 0),
         }));
         return teamRowToApiFormat(team, squad);
       })
@@ -56,7 +56,7 @@ router.get('/:teamId/players', async (req: Request, res: Response): Promise<void
     console.log(`[API] GET /api/teams/${teamId}/players`);
 
     const players = await getTeamPlayers(teamId, CURRENT_SEASON);
-    const formatted = players.map(playerRowToApiFormat);
+    const formatted = players.map((p) => playerRowToApiFormat(p as unknown as Record<string, unknown>));
 
     res.json(formatted);
   } catch (error) {
