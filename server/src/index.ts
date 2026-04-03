@@ -371,7 +371,7 @@ async function start(): Promise<void> {
       console.log(`  GET  /health                    — Simple health check`);
       console.log(`  GET  /api/health                — Detailed health check`);
       console.log(`  GET  /api/players               — All players with stats`);
-      console.log(`  GET  /api/players-minimal        — Minimal player query (no joins, confirmed columns only)`);
+      console.log(`  GET  /api/players-minimal       — Minimal player query (no joins, confirmed columns only)`);
       console.log(`  GET  /api/teams                 — All teams with squads`);
       console.log(`  GET  /api/league-table          — League standings`);
       console.log(`  GET  /api/season                — Current season info`);
