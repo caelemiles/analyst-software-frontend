@@ -5,6 +5,12 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 const apiCache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
+/** Clear the API response cache. Call when switching between debug and normal
+ *  modes so that no stale or cached data is served. */
+export function clearApiCache(): void {
+  apiCache.clear();
+}
+
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const cacheKey = endpoint;
   const isGet = !options?.method || options.method === 'GET';
@@ -208,6 +214,7 @@ function extractPlayerRows(json: unknown): RawPlayer[] {
  */
 export const DEBUG_ENDPOINTS = [
   { value: '/api/debug/players', label: '/api/debug/players' },
+  { value: '/api/debug/players-safe', label: '/api/debug/players-safe' },
   { value: '/api/players-minimal', label: '/api/players-minimal' },
 ] as const;
 

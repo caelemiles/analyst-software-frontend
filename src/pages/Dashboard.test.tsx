@@ -7,8 +7,10 @@ import Dashboard from './Dashboard';
 vi.mock('../api/client', () => ({
   fetchApiPlayersWithDebug: vi.fn(),
   fetchCurrentSeason: vi.fn(),
+  clearApiCache: vi.fn(),
   DEBUG_ENDPOINTS: [
     { value: '/api/debug/players', label: '/api/debug/players' },
+    { value: '/api/debug/players-safe', label: '/api/debug/players-safe' },
     { value: '/api/players-minimal', label: '/api/players-minimal' },
   ],
 }));
@@ -127,6 +129,15 @@ describe('Dashboard', () => {
     expect(panel).toBeInTheDocument();
     expect(panel.textContent).toContain('Debug Panel');
     expect(panel.textContent).toContain(String(livePlayers.length));
+  });
+
+  it('shows the diagnostic layer notice', async () => {
+    renderDashboard();
+    await screen.findByText('EFL League Two Players');
+    const notice = screen.getByTestId('diagnostic-notice');
+    expect(notice).toBeInTheDocument();
+    expect(notice.textContent).toContain('Diagnostic Layer');
+    expect(notice.textContent).toContain('/api/debug/players');
   });
 
   it('shows 0 players when backend returns empty array', async () => {

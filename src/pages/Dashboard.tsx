@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import PlayerCard from '../components/PlayerCard';
 import PlayerSearch from '../components/PlayerSearch';
-import { fetchApiPlayersWithDebug, DEBUG_ENDPOINTS } from '../api/client';
+import { fetchApiPlayersWithDebug, clearApiCache, DEBUG_ENDPOINTS } from '../api/client';
 import type { DebugEndpointPath } from '../api/client';
 import { useCurrentSeason } from '../hooks/useCurrentSeason';
 import type { Player, PlayerFilters, DebugInfo } from '../types';
@@ -14,6 +14,20 @@ const LEAGUES = [
   { id: 'EFL-Championship', label: 'EFL Championship' },
 ];
 
+/**
+ * Dashboard — Transparent Diagnostic Layer
+ *
+ * Testing sequence (do NOT skip ahead):
+ *  1. Debug mode ON → hit /api/debug/players, render raw rows only
+ *     (no totals, no top scorers, no xG, no sorting, no filters).
+ *  2. Only after raw rows from debug mode render correctly should
+ *     normal mode (/api/players?league=...&season=...) be considered
+ *     for richer rendering.
+ *
+ * Until the backend provides real seeded or ingested rows the
+ * frontend's only job is to remain a transparent diagnostic layer.
+ * Do NOT restore placeholders or cached fake data.
+ */
 export default function Dashboard() {
   const navigate = useNavigate();
   const { season } = useCurrentSeason();
@@ -133,7 +147,10 @@ export default function Dashboard() {
           <span className="text-yellow-400 font-bold text-sm">🔍 Debug Panel</span>
           <button
             type="button"
-            onClick={() => setDebugMode((prev) => !prev)}
+            onClick={() => {
+              clearApiCache();
+              setDebugMode((prev) => !prev);
+            }}
             className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 ${debugMode ? 'bg-yellow-500' : 'bg-slate-600'}`}
             aria-label="Toggle debug endpoint"
           >
@@ -226,6 +243,17 @@ export default function Dashboard() {
             )}
           </div>
         )}
+      </div>
+
+      {/* Diagnostic Layer Notice — always visible */}
+      <div data-testid="diagnostic-notice" className="mb-6 rounded-xl bg-amber-900/20 border border-amber-500/30 px-5 py-3 flex items-start gap-3">
+        <span className="text-amber-400 text-lg">🛠️</span>
+        <div className="text-sm text-amber-200/80">
+          <strong>Diagnostic Layer</strong> — This frontend is a transparent diagnostic layer.
+          No placeholders or cached fake data. Toggle debug mode to hit{' '}
+          <code className="text-amber-300">/api/debug/players</code> first; only switch
+          to normal mode once raw rows are visible.
+        </div>
       </div>
 
       {/* Season Banner — hidden in debug mode */}
