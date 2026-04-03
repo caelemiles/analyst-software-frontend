@@ -224,7 +224,7 @@ export async function fetchApiPlayersWithDebug(
   const isDebug = useDebugEndpoint !== false;
   if (isDebug) {
     // Debug mode: call the chosen debug endpoint with NO filters at all
-    endpoint = typeof useDebugEndpoint === 'string' ? useDebugEndpoint : '/api/debug/players';
+    endpoint = typeof useDebugEndpoint === 'string' ? useDebugEndpoint : DEBUG_ENDPOINTS[0].value;
   } else {
     const query = new URLSearchParams();
     if (params?.league) query.set('league', params.league);
