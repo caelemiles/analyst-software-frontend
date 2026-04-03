@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { config } from './config.js';
-import { initDatabase } from './db/connection.js';
+import { initDatabase, validateSchema, getTableColumns, EXPECTED_PLAYER_COLUMNS, EXPECTED_TEAM_COLUMNS } from './db/connection.js';
 import { startScheduler, triggerScrape } from './scheduler/index.js';
 import { needsInitialScrape, runScrape, CURRENT_SEASON, LEAGUE_NAME } from './scraper/index.js';
 import { getLastUpdateTime, getPlayers, upsertPlayer } from './db/queries.js';
@@ -135,6 +135,41 @@ app.post('/api/debug/seed', async (_req, res) => {
   }
 });
 
+// Debug route — show actual vs expected database schema for diagnosing column mismatches
+app.get('/api/debug/schema', async (_req, res) => {
+  try {
+    const playerCols = await getTableColumns('players');
+    const teamCols = await getTableColumns('teams');
+
+    const playerMissing = EXPECTED_PLAYER_COLUMNS.filter(c => !playerCols.includes(c));
+    const playerExtra = playerCols.filter(c => !EXPECTED_PLAYER_COLUMNS.includes(c));
+    const teamMissing = EXPECTED_TEAM_COLUMNS.filter(c => !teamCols.includes(c));
+    const teamExtra = teamCols.filter(c => !EXPECTED_TEAM_COLUMNS.includes(c));
+
+    res.json({
+      players: {
+        actual_columns: playerCols,
+        expected_columns: EXPECTED_PLAYER_COLUMNS,
+        missing_columns: playerMissing,
+        extra_columns: playerExtra,
+        match: playerMissing.length === 0 && playerExtra.length === 0,
+        note: 'Players use "team" (VARCHAR) for team linkage — NOT "team_id". No foreign key to teams table.',
+      },
+      teams: {
+        actual_columns: teamCols,
+        expected_columns: EXPECTED_TEAM_COLUMNS,
+        missing_columns: teamMissing,
+        extra_columns: teamExtra,
+        match: teamMissing.length === 0 && teamExtra.length === 0,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[Debug] Error in /api/debug/schema: ${message}`);
+    res.json({ error: message });
+  }
+});
+
 // Health check — simple
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
@@ -171,6 +206,13 @@ async function start(): Promise<void> {
     console.log('[Server] Initializing database...');
     await initDatabase();
 
+    // Validate that the DB schema matches expected columns
+    console.log('[Server] Validating database schema...');
+    const schemaReport = await validateSchema();
+    if (!schemaReport.players.match || !schemaReport.teams.match) {
+      console.warn('[Server] ⚠️ Schema validation found mismatches — check logs above');
+    }
+
     // Check if we need an initial scrape
     const needsScrape = await needsInitialScrape();
     if (needsScrape) {
@@ -195,6 +237,7 @@ async function start(): Promise<void> {
       console.log(`  GET  /api/league-table   — League standings`);
       console.log(`  GET  /api/season         — Current season info`);
       console.log(`  GET  /api/debug/players  — Debug: first 20 players from DB`);
+      console.log(`  GET  /api/debug/schema   — Debug: compare DB vs expected schema`);
       console.log(`  POST /api/debug/seed     — Seed 3 test League Two players`);
       console.log(`  POST /api/scrape         — Trigger manual scrape`);
     });

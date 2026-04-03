@@ -113,6 +113,91 @@ export async function initDatabase(): Promise<void> {
   }
 }
 
+/**
+ * Expected columns for the players table.
+ * This is the source-of-truth for schema validation at startup.
+ */
+export const EXPECTED_PLAYER_COLUMNS = [
+  'id', 'api_player_id', 'name', 'team', 'position', 'age', 'nationality',
+  'image_url', 'source', 'appearances', 'goals', 'assists', 'xg', 'xa',
+  'passes_completed', 'pass_accuracy', 'tackles', 'interceptions', 'clearances',
+  'minutes_played', 'rating', 'npxg', 'dribbles', 'key_passes', 'aerial_duels_won',
+  'yellow_cards', 'red_cards', 'fouls_drawn', 'fouls_committed',
+  'saves', 'clean_sheets', 'goals_conceded', 'penalties_saved',
+  'season', 'league', 'notes', 'ai_summary', 'last_updated',
+];
+
+/**
+ * Expected columns for the teams table.
+ */
+export const EXPECTED_TEAM_COLUMNS = [
+  'id', 'name', 'logo', 'league', 'position', 'played', 'won', 'drawn', 'lost',
+  'goals_for', 'goals_against', 'goal_difference', 'points',
+  'avg_xg', 'avg_possession', 'form', 'season', 'last_updated',
+];
+
+/**
+ * Query the actual column names for a table from information_schema.
+ */
+export async function getTableColumns(tableName: string): Promise<string[]> {
+  const db = getPool();
+  const result = await db.query<{ column_name: string }>(
+    `SELECT column_name FROM information_schema.columns
+     WHERE table_name = $1 AND table_schema = current_schema()
+     ORDER BY ordinal_position`,
+    [tableName]
+  );
+  return result.rows.map(r => r.column_name);
+}
+
+/**
+ * Validate that the actual database schema matches the expected columns.
+ * Logs warnings for mismatches but does not throw — allows the server to start.
+ */
+export async function validateSchema(): Promise<{
+  players: { actual: string[]; missing: string[]; extra: string[]; match: boolean };
+  teams: { actual: string[]; missing: string[]; extra: string[]; match: boolean };
+}> {
+  const playerCols = await getTableColumns('players');
+  const teamCols = await getTableColumns('teams');
+
+  const playerMissing = EXPECTED_PLAYER_COLUMNS.filter(c => !playerCols.includes(c));
+  const playerExtra = playerCols.filter(c => !EXPECTED_PLAYER_COLUMNS.includes(c));
+  const teamMissing = EXPECTED_TEAM_COLUMNS.filter(c => !teamCols.includes(c));
+  const teamExtra = teamCols.filter(c => !EXPECTED_TEAM_COLUMNS.includes(c));
+
+  const playersMatch = playerMissing.length === 0 && playerExtra.length === 0;
+  const teamsMatch = teamMissing.length === 0 && teamExtra.length === 0;
+
+  if (playersMatch) {
+    console.log(`[Schema] ✅ players table columns match expected schema (${playerCols.length} columns)`);
+  } else {
+    console.warn(`[Schema] ⚠️ players table schema MISMATCH`);
+    if (playerMissing.length > 0) console.warn(`[Schema]   Missing columns: ${playerMissing.join(', ')}`);
+    if (playerExtra.length > 0) console.warn(`[Schema]   Extra columns: ${playerExtra.join(', ')}`);
+  }
+
+  if (teamsMatch) {
+    console.log(`[Schema] ✅ teams table columns match expected schema (${teamCols.length} columns)`);
+  } else {
+    console.warn(`[Schema] ⚠️ teams table schema MISMATCH`);
+    if (teamMissing.length > 0) console.warn(`[Schema]   Missing columns: ${teamMissing.join(', ')}`);
+    if (teamExtra.length > 0) console.warn(`[Schema]   Extra columns: ${teamExtra.join(', ')}`);
+  }
+
+  // IMPORTANT: The players table uses `team VARCHAR(255)` (plain team name),
+  // NOT `team_id`. There is no foreign-key relationship to the teams table.
+  // Players are linked to teams by matching the `team` name string.
+  if (playerCols.includes('team_id')) {
+    console.error(`[Schema] ❌ UNEXPECTED: players table has a 'team_id' column — this is not in the expected schema`);
+  }
+
+  return {
+    players: { actual: playerCols, missing: playerMissing, extra: playerExtra, match: playersMatch },
+    teams: { actual: teamCols, missing: teamMissing, extra: teamExtra, match: teamsMatch },
+  };
+}
+
 export async function closePool(): Promise<void> {
   if (pool) {
     await pool.end();
