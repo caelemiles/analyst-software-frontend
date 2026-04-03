@@ -44,7 +44,7 @@ app.get('/players', async (req, res) => {
     const { getPlayers } = await import('./db/queries.js');
     const { playerRowToApiFormat } = await import('./scraper/normalize.js');
     const { players } = await getPlayers({ league, season });
-    res.json(players.map((p) => playerRowToApiFormat(p as unknown as Record<string, unknown>)));
+    res.json(players.map(playerRowToApiFormat));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[API] Error in legacy /players: ${message}`);
@@ -63,7 +63,7 @@ app.get('/player/:id', async (req, res) => {
       res.status(404).json({ error: 'Player not found' });
       return;
     }
-    res.json(playerRowToApiFormat(player as unknown as Record<string, unknown>));
+    res.json(playerRowToApiFormat(player));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[API] Error in /player/:id: ${message}`);
@@ -78,7 +78,7 @@ app.get('/api/league/:leagueId/players', async (req, res) => {
     const { getPlayers } = await import('./db/queries.js');
     const { playerRowToApiFormat } = await import('./scraper/normalize.js');
     const { players } = await getPlayers({ league, season: CURRENT_SEASON });
-    res.json(players.map((p) => playerRowToApiFormat(p as unknown as Record<string, unknown>)));
+    res.json(players.map(playerRowToApiFormat));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[API] Error in /api/league/:leagueId/players: ${message}`);

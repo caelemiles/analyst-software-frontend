@@ -1,6 +1,7 @@
 import { getPool, getTableColumns } from './connection.js';
 
 export interface PlayerRow {
+  [key: string]: unknown;
   id: number;
   api_player_id: number | null;
   name: string;
@@ -379,6 +380,10 @@ export async function getPlayers(options?: {
       paramIdx++;
     } else if (hasName) {
       conditions.push(`name ILIKE $${paramIdx}`);
+      params.push(`%${options.search}%`);
+      paramIdx++;
+    } else if (hasTeam) {
+      conditions.push(`team ILIKE $${paramIdx}`);
       params.push(`%${options.search}%`);
       paramIdx++;
     }

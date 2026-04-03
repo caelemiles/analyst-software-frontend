@@ -56,7 +56,7 @@ router.get('/:teamId/players', async (req: Request, res: Response): Promise<void
     console.log(`[API] GET /api/teams/${teamId}/players`);
 
     const players = await getTeamPlayers(teamId, CURRENT_SEASON);
-    const formatted = players.map((p) => playerRowToApiFormat(p as unknown as Record<string, unknown>));
+    const formatted = players.map(playerRowToApiFormat);
 
     res.json(formatted);
   } catch (error) {
