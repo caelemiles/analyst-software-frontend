@@ -70,82 +70,48 @@ export function normalizeTeamData(
 
 /**
  * Convert a database player row to the API response format expected by the frontend.
+ * Tolerates missing columns — any field not present in the row gets a safe default.
+ * This is critical because the production players table may not have all columns.
  */
-export function playerRowToApiFormat(row: {
-  id: number;
-  api_player_id: number | null;
-  name: string;
-  team: string;
-  position: string;
-  age: number;
-  nationality: string;
-  image_url: string | null;
-  source: string;
-  appearances: number;
-  goals: number;
-  assists: number;
-  xg: number;
-  xa: number;
-  passes_completed: number;
-  pass_accuracy: number;
-  tackles: number;
-  interceptions: number;
-  clearances: number;
-  minutes_played: number;
-  rating: number;
-  npxg: number;
-  dribbles: number;
-  key_passes: number;
-  aerial_duels_won: number;
-  yellow_cards: number;
-  red_cards: number;
-  fouls_drawn: number;
-  fouls_committed: number;
-  saves: number;
-  clean_sheets: number;
-  goals_conceded: number;
-  penalties_saved: number;
-  notes: string;
-  ai_summary: string;
-}) {
+export function playerRowToApiFormat(row: Record<string, unknown>) {
   return {
-    id: row.id,
-    api_player_id: row.api_player_id,
-    name: row.name,
-    team: row.team,
-    position: row.position,
-    age: row.age,
-    nationality: row.nationality,
-    image_url: row.image_url,
-    source: row.source,
+    id: row.id ?? 0,
+    api_player_id: row.api_player_id ?? null,
+    name: row.name ?? 'Unknown',
+    team: row.team ?? 'Unknown',
+    position: row.position ?? 'Unknown',
+    age: row.age ?? 0,
+    nationality: row.nationality ?? 'Unknown',
+    image_url: row.image_url ?? null,
+    source: row.source ?? 'scraper',
     stats: {
-      appearances: Number(row.appearances),
-      goals: Number(row.goals),
-      assists: Number(row.assists),
-      xG: Number(row.xg),
-      xA: Number(row.xa),
-      passes_completed: Number(row.passes_completed),
-      pass_accuracy: Number(row.pass_accuracy),
-      tackles: Number(row.tackles),
-      interceptions: Number(row.interceptions),
-      clearances: Number(row.clearances),
-      minutes_played: Number(row.minutes_played),
-      rating: Number(row.rating),
-      npxG: Number(row.npxg),
-      dribbles: Number(row.dribbles),
-      key_passes: Number(row.key_passes),
-      aerial_duels_won: Number(row.aerial_duels_won),
-      yellow_cards: Number(row.yellow_cards),
-      red_cards: Number(row.red_cards),
-      fouls_drawn: Number(row.fouls_drawn),
-      fouls_committed: Number(row.fouls_committed),
-      saves: Number(row.saves),
-      clean_sheets: Number(row.clean_sheets),
-      goals_conceded: Number(row.goals_conceded),
-      penalties_saved: Number(row.penalties_saved),
+      appearances: Number(row.appearances ?? 0),
+      goals: Number(row.goals ?? 0),
+      assists: Number(row.assists ?? 0),
+      xG: Number(row.xg ?? 0),
+      xA: Number(row.xa ?? 0),
+      passes_completed: Number(row.passes_completed ?? 0),
+      pass_accuracy: Number(row.pass_accuracy ?? 0),
+      tackles: Number(row.tackles ?? 0),
+      interceptions: Number(row.interceptions ?? 0),
+      clearances: Number(row.clearances ?? 0),
+      minutes_played: Number(row.minutes_played ?? 0),
+      rating: Number(row.rating ?? 0),
+      npxG: Number(row.npxg ?? 0),
+      dribbles: Number(row.dribbles ?? 0),
+      key_passes: Number(row.key_passes ?? 0),
+      aerial_duels_won: Number(row.aerial_duels_won ?? 0),
+      yellow_cards: Number(row.yellow_cards ?? 0),
+      red_cards: Number(row.red_cards ?? 0),
+      fouls_drawn: Number(row.fouls_drawn ?? 0),
+      fouls_committed: Number(row.fouls_committed ?? 0),
+      saves: Number(row.saves ?? 0),
+      clean_sheets: Number(row.clean_sheets ?? 0),
+      goals_conceded: Number(row.goals_conceded ?? 0),
+      penalties_saved: Number(row.penalties_saved ?? 0),
     },
-    notes: row.notes,
-    ai_summary: row.ai_summary,
+    notes: row.notes ?? '',
+    ai_summary: row.ai_summary ?? '',
   };
 }
 

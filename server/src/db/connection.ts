@@ -74,6 +74,61 @@ export async function initDatabase(): Promise<void> {
       );
     `);
 
+    // --- MIGRATION: Add any missing columns to an already-existing players table ---
+    // CREATE TABLE IF NOT EXISTS does nothing when the table already exists,
+    // so production tables may lack columns added after the initial creation.
+    const playerAlterStatements = [
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS api_player_id INTEGER UNIQUE`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS position VARCHAR(50) NOT NULL DEFAULT 'Unknown'`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS age INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS nationality VARCHAR(100) NOT NULL DEFAULT 'Unknown'`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS image_url TEXT`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'scraper'`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS appearances INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS goals INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS assists INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS xg NUMERIC(6,2) NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS xa NUMERIC(6,2) NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS passes_completed INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS pass_accuracy NUMERIC(5,2) NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS tackles INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS interceptions INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS clearances INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS minutes_played INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS rating NUMERIC(4,2) NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS npxg NUMERIC(6,2) NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS dribbles INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS key_passes INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS aerial_duels_won INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS yellow_cards INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS red_cards INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS fouls_drawn INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS fouls_committed INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS saves INTEGER DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS clean_sheets INTEGER DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS goals_conceded INTEGER DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS penalties_saved INTEGER DEFAULT 0`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS season VARCHAR(10) NOT NULL DEFAULT '2025/26'`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS league VARCHAR(100) NOT NULL DEFAULT 'EFL League Two'`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT ''`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS ai_summary TEXT DEFAULT ''`,
+      `ALTER TABLE players ADD COLUMN IF NOT EXISTS last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW()`,
+    ];
+    for (const stmt of playerAlterStatements) {
+      try {
+        await db.query(stmt);
+      } catch (alterErr) {
+        // Log but don't fail — the column may already exist with a different constraint
+        console.warn(`[DB] ALTER warning: ${alterErr instanceof Error ? alterErr.message : String(alterErr)}`);
+      }
+    }
+    // Ensure unique constraint exists (ignore error if already present)
+    try {
+      await db.query(`ALTER TABLE players ADD CONSTRAINT unique_player_team_season UNIQUE (name, team, season)`);
+    } catch {
+      // constraint already exists — that's fine
+    }
+
     await db.query(`
       CREATE TABLE IF NOT EXISTS teams (
         id SERIAL PRIMARY KEY,
@@ -98,6 +153,38 @@ export async function initDatabase(): Promise<void> {
       );
     `);
 
+    // --- MIGRATION: Add any missing columns to an already-existing teams table ---
+    const teamAlterStatements = [
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS logo TEXT`,
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS league VARCHAR(100) NOT NULL DEFAULT 'EFL League Two'`,
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS position INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS played INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS won INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS drawn INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS lost INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS goals_for INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS goals_against INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS goal_difference INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS points INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS avg_xg NUMERIC(5,2) DEFAULT 0`,
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS avg_possession NUMERIC(5,2) DEFAULT 0`,
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS form VARCHAR(20) DEFAULT ''`,
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS season VARCHAR(10) NOT NULL DEFAULT '2025/26'`,
+      `ALTER TABLE teams ADD COLUMN IF NOT EXISTS last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW()`,
+    ];
+    for (const stmt of teamAlterStatements) {
+      try {
+        await db.query(stmt);
+      } catch (alterErr) {
+        console.warn(`[DB] ALTER warning: ${alterErr instanceof Error ? alterErr.message : String(alterErr)}`);
+      }
+    }
+    try {
+      await db.query(`ALTER TABLE teams ADD CONSTRAINT unique_team_season UNIQUE (name, season)`);
+    } catch {
+      // constraint already exists
+    }
+
     // Create indexes
     await db.query(`CREATE INDEX IF NOT EXISTS idx_players_team ON players(team)`);
     await db.query(`CREATE INDEX IF NOT EXISTS idx_players_league ON players(league)`);
@@ -105,6 +192,10 @@ export async function initDatabase(): Promise<void> {
     await db.query(`CREATE INDEX IF NOT EXISTS idx_players_position ON players(position)`);
     await db.query(`CREATE INDEX IF NOT EXISTS idx_teams_league ON teams(league)`);
     await db.query(`CREATE INDEX IF NOT EXISTS idx_teams_season ON teams(season)`);
+
+    // Log final schema state
+    const finalCols = await getTableColumns('players');
+    console.log(`[DB] Players table now has ${finalCols.length} columns: ${finalCols.join(', ')}`);
 
     console.log('[DB] Database schema initialized successfully');
   } catch (error) {
