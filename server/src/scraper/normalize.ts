@@ -73,6 +73,7 @@ export function normalizeTeamData(
  */
 export function playerRowToApiFormat(row: {
   id: number;
+  api_player_id: number | null;
   name: string;
   team: string;
   position: string;
@@ -109,6 +110,7 @@ export function playerRowToApiFormat(row: {
 }) {
   return {
     id: row.id,
+    api_player_id: row.api_player_id,
     name: row.name,
     team: row.team,
     position: row.position,
