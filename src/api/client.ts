@@ -202,20 +202,29 @@ function extractPlayerRows(json: unknown): RawPlayer[] {
  * Fetch players from /api/players (or /api/debug/players in test mode)
  * and return both the data and full debug info for the debug panel.
  *
- * In debug mode, calls /api/debug/players with NO query params (no league,
- * season, or other filters). The debug endpoint returns a raw array of rows.
+ * In debug mode, calls the chosen debug endpoint (e.g. /api/debug/players or
+ * /api/players-minimal) with NO query params (no league, season, or other
+ * filters). The debug endpoint returns a raw array of rows.
  */
+export const DEBUG_ENDPOINTS = [
+  { value: '/api/debug/players', label: '/api/debug/players' },
+  { value: '/api/players-minimal', label: '/api/players-minimal' },
+] as const;
+
+export type DebugEndpointPath = typeof DEBUG_ENDPOINTS[number]['value'];
+
 export async function fetchApiPlayersWithDebug(
   params?: {
     league?: string;
     season?: string;
   },
-  useDebugEndpoint = false,
+  useDebugEndpoint: boolean | DebugEndpointPath = false,
 ): Promise<{ data: ApiPlayersResponse; debug: DebugInfo }> {
   let endpoint: string;
-  if (useDebugEndpoint) {
-    // Debug mode: call /api/debug/players with NO filters at all
-    endpoint = '/api/debug/players';
+  const isDebug = useDebugEndpoint !== false;
+  if (isDebug) {
+    // Debug mode: call the chosen debug endpoint with NO filters at all
+    endpoint = typeof useDebugEndpoint === 'string' ? useDebugEndpoint : DEBUG_ENDPOINTS[0].value;
   } else {
     const query = new URLSearchParams();
     if (params?.league) query.set('league', params.league);
@@ -270,8 +279,8 @@ export async function fetchApiPlayersWithDebug(
       debug.responseShape = 'other';
     }
 
-    if (useDebugEndpoint) {
-      // /api/debug/players returns a raw array of player rows (not wrapped)
+    if (isDebug) {
+      // Debug endpoints may return a raw array or { players: [...] } wrapper
       const rows = extractPlayerRows(json);
       debug.playerCount = rows.length;
       debug.rawPlayerNames = rows.slice(0, 2).map(extractPlayerName);

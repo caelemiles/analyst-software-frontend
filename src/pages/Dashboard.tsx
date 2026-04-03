@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import PlayerCard from '../components/PlayerCard';
 import PlayerSearch from '../components/PlayerSearch';
-import { fetchApiPlayersWithDebug } from '../api/client';
+import { fetchApiPlayersWithDebug, DEBUG_ENDPOINTS } from '../api/client';
+import type { DebugEndpointPath } from '../api/client';
 import { useCurrentSeason } from '../hooks/useCurrentSeason';
 import type { Player, PlayerFilters, DebugInfo } from '../types';
 
@@ -21,6 +22,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [selectedLeague, setSelectedLeague] = useState('EFL-League-Two');
   const [debugMode, setDebugMode] = useState(false);
+  const [debugEndpoint, setDebugEndpoint] = useState<DebugEndpointPath>('/api/debug/players');
   const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
   const [filters, setFilters] = useState<PlayerFilters>({
     search: '',
@@ -41,7 +43,7 @@ export default function Dashboard() {
 
       const { data, debug } = await fetchApiPlayersWithDebug(
         debugMode ? undefined : { league: selectedLeague, season },
-        debugMode,
+        debugMode ? debugEndpoint : false,
       );
 
       if (cancelled) return;
@@ -63,7 +65,7 @@ export default function Dashboard() {
     }
     loadPlayers();
     return () => { cancelled = true; };
-  }, [selectedLeague, season, debugMode]);
+  }, [selectedLeague, season, debugMode, debugEndpoint]);
 
   const teams = useMemo(
     () => [...new Set(players.map((p) => p.team))].sort(),
@@ -145,9 +147,25 @@ export default function Dashboard() {
             {debugMode ? '⚡ Debug mode ON' : 'Normal mode'}
           </span>
           <span className="text-slate-500 ml-2">
-            → {debugMode ? '/api/debug/players (no filters)' : `/api/players?league=${selectedLeague}&season=${season}`}
+            → {debugMode ? `${debugEndpoint} (no filters)` : `/api/players?league=${selectedLeague}&season=${season}`}
           </span>
         </div>
+        {debugMode && (
+          <div className="mb-2 flex items-center gap-2">
+            <label htmlFor="debug-endpoint-select" className="text-slate-400 text-xs">Endpoint:</label>
+            <select
+              id="debug-endpoint-select"
+              aria-label="Debug endpoint"
+              value={debugEndpoint}
+              onChange={(e) => setDebugEndpoint(e.target.value as DebugEndpointPath)}
+              className="px-2 py-1 rounded-md text-xs text-yellow-200 bg-slate-800 border border-yellow-500/40 focus:border-yellow-400 focus:outline-none"
+            >
+              {DEBUG_ENDPOINTS.map((ep) => (
+                <option key={ep.value} value={ep.value}>{ep.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
         {debugInfo && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-slate-300">
             <div><span className="text-slate-500">URL:</span> {debugInfo.url}</div>
@@ -286,24 +304,45 @@ export default function Dashboard() {
       )}
 
       {debugMode ? (
-        /* Debug mode: show raw rows with no filters, search, or derived logic */
+        /* Debug mode: show raw rows as a plain table — no filters, no derived calculations */
         <>
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-white">Debug Mode — Raw Player Rows</h1>
             <p className="text-slate-400 mt-1">
-              Showing {players.length} unfiltered rows from /api/debug/players
+              Showing {players.length} unfiltered rows from {debugEndpoint}
             </p>
           </div>
           {players.length === 0 ? (
             <div className="text-center py-12 text-slate-400 glass rounded-xl">
-              No rows returned from /api/debug/players. The backend database may be empty or unseeded.
+              No rows returned from {debugEndpoint}. The backend database may be empty or unseeded.
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {players.map((player) => (
-                  <PlayerCard key={player.id} player={player} />
-                ))}
+              <div className="overflow-x-auto rounded-xl glass">
+                <table className="w-full text-sm text-left text-slate-300">
+                  <thead className="text-xs text-slate-400 uppercase bg-slate-800/50">
+                    <tr>
+                      <th className="px-4 py-3">ID</th>
+                      <th className="px-4 py-3">Name</th>
+                      <th className="px-4 py-3">Team</th>
+                      <th className="px-4 py-3">Position</th>
+                      <th className="px-4 py-3">Age</th>
+                      <th className="px-4 py-3">Nationality</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {players.map((player) => (
+                      <tr key={player.id} className="border-b border-slate-700/50 hover:bg-slate-800/30">
+                        <td className="px-4 py-2 font-mono">{player.id}</td>
+                        <td className="px-4 py-2">{player.name}</td>
+                        <td className="px-4 py-2">{player.team}</td>
+                        <td className="px-4 py-2">{player.position}</td>
+                        <td className="px-4 py-2">{player.age}</td>
+                        <td className="px-4 py-2">{player.nationality}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
               <div className="mt-4 text-center text-sm text-slate-500">
                 Showing {players.length} raw rows (debug)
