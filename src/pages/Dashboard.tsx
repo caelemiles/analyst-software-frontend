@@ -18,10 +18,10 @@ const LEAGUES = [
  * Dashboard — Transparent Diagnostic Layer
  *
  * Testing sequence (do NOT skip ahead):
- *  1. Debug mode ON  → hit /api/debug/players, render raw rows only
+ *  1. Debug mode ON → hit /api/debug/players, render raw rows only
  *     (no totals, no top scorers, no xG, no sorting, no filters).
  *  2. Only after raw rows from debug mode render correctly should
- *     normal mode (/api/players?league=…&season=…) be considered
+ *     normal mode (/api/players?league=...&season=...) be considered
  *     for richer rendering.
  *
  * Until the backend provides real seeded or ingested rows the
