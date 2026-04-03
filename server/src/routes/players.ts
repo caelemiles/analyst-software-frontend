@@ -137,6 +137,26 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     console.error(`[API]   Stack: ${stack}`);
     console.error(`[API]   Query params were: ${JSON.stringify(req.query)}`);
 
+    // If the error mentions team_id, provide specific diagnostic info
+    const isTeamIdError = message.includes('team_id');
+    if (isTeamIdError) {
+      console.error(`[API] ❌ CRITICAL: Error references 'team_id' but this column should NOT exist.`);
+      console.error(`[API]   The players table uses 'team' (VARCHAR), not 'team_id'.`);
+      console.error(`[API]   This error likely means stale compiled code is running.`);
+      console.error(`[API]   Run: npm run build && npm start — to recompile from source.`);
+    }
+
+    // Fetch actual schema columns for diagnostics (best-effort)
+    let debugSchema: { columns?: string[]; error?: string } = {};
+    try {
+      const { getTableColumns } = await import('../db/connection.js');
+      const cols = await getTableColumns('players');
+      debugSchema = { columns: cols };
+      console.error(`[API]   Actual players columns: ${cols.join(', ')}`);
+    } catch {
+      debugSchema = { error: 'Could not query schema' };
+    }
+
     // Return a structured error payload — still 200 so the frontend can handle it gracefully
     res.json({
       error: 'Failed to fetch players',
@@ -144,6 +164,14 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       players: [],
       total: 0,
       liveData: false,
+      debug: {
+        details: message,
+        queryParams: req.query,
+        actualPlayerColumns: debugSchema,
+        hint: isTeamIdError
+          ? 'This server does NOT use team_id. The players table uses "team" (VARCHAR). If you see this error, stale compiled code may be running. Rebuild with: npm run build'
+          : undefined,
+      },
     });
   }
 });

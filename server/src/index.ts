@@ -135,6 +135,49 @@ app.post('/api/debug/seed', async (_req, res) => {
   }
 });
 
+// Debug route — run a raw query to verify column access (no joins, no filters)
+app.get('/api/debug/query-test', async (_req, res) => {
+  try {
+    const db = (await import('./db/connection.js')).getPool();
+    // Test 1: Check that 'team' column exists (the correct column)
+    const teamTest = await db.query('SELECT team FROM players LIMIT 1');
+    // Test 2: Check column names from information_schema
+    const colsResult = await db.query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'players' AND table_schema = current_schema()
+       ORDER BY ordinal_position`
+    );
+    const columns = colsResult.rows.map(r => r.column_name);
+    const hasTeam = columns.includes('team');
+    const hasTeamId = columns.includes('team_id');
+
+    res.json({
+      success: true,
+      columns,
+      hasTeamColumn: hasTeam,
+      hasTeamIdColumn: hasTeamId,
+      teamQueryWorks: teamTest.rows.length >= 0,
+      sampleRow: teamTest.rows[0] ?? null,
+      diagnosis: hasTeamId
+        ? '❌ PROBLEM: players table has team_id column — this should not exist. Drop it or check migrations.'
+        : hasTeam
+          ? '✅ OK: players table uses "team" column (VARCHAR). No team_id. This is correct.'
+          : '❌ PROBLEM: players table has neither "team" nor "team_id" column.',
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    res.json({
+      success: false,
+      error: message,
+      diagnosis: message.includes('team_id')
+        ? 'The query referenced team_id which does not exist. The correct column is "team".'
+        : message.includes('team')
+          ? 'The query referenced "team" but it failed — check the DB schema.'
+          : `Unexpected error: ${message}`,
+    });
+  }
+});
+
 // Debug route — show actual vs expected database schema for diagnosing column mismatches
 app.get('/api/debug/schema', async (_req, res) => {
   try {
@@ -213,6 +256,20 @@ async function start(): Promise<void> {
       console.warn('[Server] ⚠️ Schema validation found mismatches — check logs above');
     }
 
+    // Explicit startup diagnostics for the team_id issue
+    console.log('[Server] === SCHEMA DIAGNOSTIC ===');
+    console.log(`[Server] Players table columns: ${schemaReport.players.actual.join(', ')}`);
+    console.log(`[Server] Has "team" column: ${schemaReport.players.actual.includes('team')}`);
+    console.log(`[Server] Has "team_id" column: ${schemaReport.players.actual.includes('team_id')}`);
+    if (schemaReport.players.actual.includes('team_id')) {
+      console.error('[Server] ❌ CRITICAL: "team_id" column found in players table — this is NOT expected!');
+      console.error('[Server]   No query in this codebase uses team_id. All queries use "team" (VARCHAR).');
+    }
+    if (!schemaReport.players.actual.includes('team')) {
+      console.error('[Server] ❌ CRITICAL: "team" column NOT found in players table — queries will fail!');
+    }
+    console.log('[Server] === END DIAGNOSTIC ===');
+
     // Check if we need an initial scrape
     const needsScrape = await needsInitialScrape();
     if (needsScrape) {
@@ -236,9 +293,10 @@ async function start(): Promise<void> {
       console.log(`  GET  /api/teams          — All teams with squads`);
       console.log(`  GET  /api/league-table   — League standings`);
       console.log(`  GET  /api/season         — Current season info`);
-      console.log(`  GET  /api/debug/players  — Debug: first 20 players from DB`);
-      console.log(`  GET  /api/debug/schema   — Debug: compare DB vs expected schema`);
-      console.log(`  POST /api/debug/seed     — Seed 3 test League Two players`);
+      console.log(`  GET  /api/debug/players     — Debug: first 20 players from DB`);
+      console.log(`  GET  /api/debug/schema      — Debug: compare DB vs expected schema`);
+      console.log(`  GET  /api/debug/query-test  — Debug: verify team column access`);
+      console.log(`  POST /api/debug/seed        — Seed 3 test League Two players`);
       console.log(`  POST /api/scrape         — Trigger manual scrape`);
     });
   } catch (error) {
