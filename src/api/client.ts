@@ -153,6 +153,32 @@ export async function fetchHighlights(playerId: number): Promise<{ highlights: P
   return request<{ highlights: Player['highlights'] }>(`/api/players/${playerId}/highlights`);
 }
 
+/**
+ * Fetch players from the /api/players-minimal endpoint.
+ * This endpoint returns only base columns (id, name, team, league, season, etc.)
+ * with no joins, no associations, and no computed fields.
+ */
+export async function fetchPlayersMinimal(limit = 50): Promise<ApiPlayersResponse> {
+  const url = `${API_BASE_URL}/api/players-minimal?limit=${limit}`;
+  console.log(`[DEBUG] Fetching minimal endpoint: ${url}`);
+  try {
+    const response = await fetch(url, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) {
+      console.error(`[DEBUG] Minimal endpoint returned ${response.status}`);
+      return { players: [], liveData: false, total: 0 };
+    }
+    const json = await response.json() as { players: RawPlayer[]; total: number; liveData: boolean };
+    const players = Array.isArray(json.players) ? normalizePlayers(json.players) : [];
+    console.log(`[DEBUG] Minimal endpoint returned ${players.length} players`);
+    return { players, liveData: json.liveData ?? false, total: json.total ?? players.length };
+  } catch (err) {
+    console.error(`[DEBUG] Minimal endpoint error:`, err);
+    return { players: [], liveData: false, total: 0 };
+  }
+}
+
 export async function updatePlayerNotes(id: number, notes: string): Promise<Player> {
   return request<Player>(`/player/${id}/update-notes`, {
     method: 'POST',

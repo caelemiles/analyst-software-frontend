@@ -4,7 +4,7 @@ import { config } from './config.js';
 import { initDatabase, validateSchema, getTableColumns, EXPECTED_PLAYER_COLUMNS, EXPECTED_TEAM_COLUMNS } from './db/connection.js';
 import { startScheduler, triggerScrape } from './scheduler/index.js';
 import { needsInitialScrape, runScrape, CURRENT_SEASON, LEAGUE_NAME } from './scraper/index.js';
-import { getLastUpdateTime, getPlayers, getPlayersSafe, upsertPlayer, invalidatePlayerColumnsCache } from './db/queries.js';
+import { getLastUpdateTime, getPlayers, getPlayersSafe, getPlayersMinimal, getPlayerCounts, upsertPlayer, invalidatePlayerColumnsCache } from './db/queries.js';
 
 import playersRouter from './routes/players.js';
 import teamsRouter from './routes/teams.js';
@@ -255,6 +255,47 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true });
 });
 
+// Minimal players endpoint — no joins, no associations, no computed fields
+// Returns only confirmed-existing columns from the base players table
+app.get('/api/players-minimal', async (req, res) => {
+  try {
+    const limitParam = typeof req.query.limit === 'string' ? parseInt(req.query.limit, 10) : 50;
+    const limit = Math.min(Math.max(1, limitParam), 200);
+    console.log(`[API] ➡️ /api/players-minimal request (limit=${limit})`);
+    const players = await getPlayersMinimal(limit);
+    console.log(`[API] ✅ /api/players-minimal returning ${players.length} rows`);
+    res.json({
+      players,
+      total: players.length,
+      liveData: players.length > 0,
+      note: 'Minimal query — only base players table, no joins, no associations, only confirmed columns',
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[API] ❌ /api/players-minimal error: ${message}`);
+    res.json({
+      players: [],
+      total: 0,
+      liveData: false,
+      error: message,
+    });
+  }
+});
+
+// Debug route — player counts grouped by league, season, and source
+app.get('/api/debug/player-counts', async (_req, res) => {
+  try {
+    console.log(`[Debug] ➡️ /api/debug/player-counts request`);
+    const counts = await getPlayerCounts();
+    console.log(`[Debug] ✅ /api/debug/player-counts: total=${counts.total}`);
+    res.json(counts);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[Debug] ❌ /api/debug/player-counts error: ${message}`);
+    res.json({ error: message, total: 0, byLeague: {}, bySeason: {}, bySource: {} });
+  }
+});
+
 // Health check — detailed
 app.get('/api/health', async (_req, res) => {
   try {
@@ -327,18 +368,20 @@ async function start(): Promise<void> {
     app.listen(env.port, () => {
       console.log(`[Server] Running on port ${env.port} (${env.nodeEnv})`);
       console.log(`[Server] API endpoints:`);
-      console.log(`  GET  /health             — Simple health check`);
-      console.log(`  GET  /api/health         — Detailed health check`);
-      console.log(`  GET  /api/players        — All players with stats`);
-      console.log(`  GET  /api/teams          — All teams with squads`);
-      console.log(`  GET  /api/league-table   — League standings`);
-      console.log(`  GET  /api/season         — Current season info`);
-      console.log(`  GET  /api/debug/players     — Debug: first 20 players (schema-safe)`);
-      console.log(`  GET  /api/debug/players-safe — Debug: ultra-minimal query with actual columns`);
-      console.log(`  GET  /api/debug/schema      — Debug: compare DB vs expected schema`);
-      console.log(`  GET  /api/debug/query-test  — Debug: verify team column access`);
-      console.log(`  POST /api/debug/seed        — Seed 3 test League Two players`);
-      console.log(`  POST /api/scrape         — Trigger manual scrape`);
+      console.log(`  GET  /health                    — Simple health check`);
+      console.log(`  GET  /api/health                — Detailed health check`);
+      console.log(`  GET  /api/players               — All players with stats`);
+      console.log(`  GET  /api/players-minimal        — Minimal player query (no joins, confirmed columns only)`);
+      console.log(`  GET  /api/teams                 — All teams with squads`);
+      console.log(`  GET  /api/league-table          — League standings`);
+      console.log(`  GET  /api/season                — Current season info`);
+      console.log(`  GET  /api/debug/players          — Debug: first 20 players (schema-safe)`);
+      console.log(`  GET  /api/debug/players-safe     — Debug: ultra-minimal query with actual columns`);
+      console.log(`  GET  /api/debug/schema           — Debug: compare DB vs expected schema`);
+      console.log(`  GET  /api/debug/query-test       — Debug: verify team column access`);
+      console.log(`  GET  /api/debug/player-counts    — Debug: player counts by league/season/source`);
+      console.log(`  POST /api/debug/seed             — Seed 3 test League Two players`);
+      console.log(`  POST /api/scrape                — Trigger manual scrape`);
     });
   } catch (error) {
     console.error('[Server] Failed to start:', error);
