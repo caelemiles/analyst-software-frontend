@@ -151,6 +151,15 @@ app.get('/api/debug/query-test', async (_req, res) => {
     const hasTeam = columns.includes('team');
     const hasTeamId = columns.includes('team_id');
 
+    let diagnosis: string;
+    if (hasTeamId) {
+      diagnosis = '❌ PROBLEM: players table has team_id column — this should not exist. Drop it or check migrations.';
+    } else if (hasTeam) {
+      diagnosis = '✅ OK: players table uses "team" column (VARCHAR). No team_id. This is correct.';
+    } else {
+      diagnosis = '❌ PROBLEM: players table has neither "team" nor "team_id" column.';
+    }
+
     res.json({
       success: true,
       columns,
@@ -158,22 +167,23 @@ app.get('/api/debug/query-test', async (_req, res) => {
       hasTeamIdColumn: hasTeamId,
       teamQueryWorks: teamTest.rows.length >= 0,
       sampleRow: teamTest.rows[0] ?? null,
-      diagnosis: hasTeamId
-        ? '❌ PROBLEM: players table has team_id column — this should not exist. Drop it or check migrations.'
-        : hasTeam
-          ? '✅ OK: players table uses "team" column (VARCHAR). No team_id. This is correct.'
-          : '❌ PROBLEM: players table has neither "team" nor "team_id" column.',
+      diagnosis,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    let diagnosis: string;
+    if (message.includes('team_id')) {
+      diagnosis = 'The query referenced team_id which does not exist. The correct column is "team".';
+    } else if (message.includes('team')) {
+      diagnosis = 'The query referenced "team" but it failed — check the DB schema.';
+    } else {
+      diagnosis = `Unexpected error: ${message}`;
+    }
+
     res.json({
       success: false,
       error: message,
-      diagnosis: message.includes('team_id')
-        ? 'The query referenced team_id which does not exist. The correct column is "team".'
-        : message.includes('team')
-          ? 'The query referenced "team" but it failed — check the DB schema.'
-          : `Unexpected error: ${message}`,
+      diagnosis,
     });
   }
 });

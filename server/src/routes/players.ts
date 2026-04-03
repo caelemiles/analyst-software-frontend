@@ -153,8 +153,10 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       const cols = await getTableColumns('players');
       debugSchema = { columns: cols };
       console.error(`[API]   Actual players columns: ${cols.join(', ')}`);
-    } catch {
-      debugSchema = { error: 'Could not query schema' };
+    } catch (schemaErr) {
+      const schemaMsg = schemaErr instanceof Error ? schemaErr.message : String(schemaErr);
+      console.error(`[API]   Failed to query schema for diagnostics: ${schemaMsg}`);
+      debugSchema = { error: `Could not query schema: ${schemaMsg}` };
     }
 
     // Return a structured error payload — still 200 so the frontend can handle it gracefully
