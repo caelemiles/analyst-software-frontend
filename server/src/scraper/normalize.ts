@@ -72,6 +72,10 @@ export function normalizeTeamData(
  * Convert a database player row to the API response format expected by the frontend.
  * Tolerates missing columns — any field not present in the row gets a safe default.
  * This is critical because the production players table may not have all columns.
+ *
+ * IMPORTANT: Only returns fields that are confirmed to exist in the base players table.
+ * Does NOT include computed fields (goals_per90, match_id) or optional fields
+ * (ai_summary, notes) that may not exist in production. This keeps the route safe.
  */
 export function playerRowToApiFormat(row: Record<string, unknown>) {
   return {
@@ -84,6 +88,8 @@ export function playerRowToApiFormat(row: Record<string, unknown>) {
     nationality: row.nationality ?? 'Unknown',
     image_url: row.image_url ?? null,
     source: row.source ?? 'scraper',
+    season: row.season ?? '',
+    league: row.league ?? '',
     stats: {
       appearances: Number(row.appearances ?? 0),
       goals: Number(row.goals ?? 0),
@@ -110,8 +116,6 @@ export function playerRowToApiFormat(row: Record<string, unknown>) {
       goals_conceded: Number(row.goals_conceded ?? 0),
       penalties_saved: Number(row.penalties_saved ?? 0),
     },
-    notes: row.notes ?? '',
-    ai_summary: row.ai_summary ?? '',
   };
 }
 

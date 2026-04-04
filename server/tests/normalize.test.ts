@@ -154,8 +154,10 @@ describe('playerRowToApiFormat', () => {
     expect(result.stats.minutes_played).toBe(2680);
     expect(result.stats.rating).toBe(7.3);
     expect(result.stats.yellow_cards).toBe(4);
-    expect(result.notes).toBe('');
-    expect(result.ai_summary).toBe('Clinical finisher');
+    // notes and ai_summary are intentionally stripped from the API response
+    // to avoid referencing nonexistent production columns
+    expect(result).not.toHaveProperty('notes');
+    expect(result).not.toHaveProperty('ai_summary');
   });
 
   it('converts numeric strings from DB to numbers', () => {
