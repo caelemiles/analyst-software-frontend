@@ -21,7 +21,7 @@ export interface ScrapeResult {
 
 /**
  * Run a full scrape and database update for the league.
- * Returns a result summary.
+ * Returns a result summary with end-to-end logging.
  */
 export async function runScrape(): Promise<ScrapeResult> {
   const startTime = Date.now();
@@ -30,65 +30,71 @@ export async function runScrape(): Promise<ScrapeResult> {
   let playersUpserted = 0;
 
   console.log('═══════════════════════════════════════════════════════');
-  console.log('🚀 SCRAPER STARTED');
-  console.log(`[Scraper] League: ${LEAGUE_NAME}`);
-  console.log(`[Scraper] Season: ${CURRENT_SEASON}`);
-  console.log(`[Scraper] Time: ${new Date().toISOString()}`);
+  console.log('🚀 INGESTION STARTED');
+  console.log(`[Ingestion] League: ${LEAGUE_NAME}`);
+  console.log(`[Ingestion] Season: ${CURRENT_SEASON}`);
+  console.log(`[Ingestion] Data source: FotMob scraper`);
+  console.log(`[Ingestion] Time: ${new Date().toISOString()}`);
   console.log('═══════════════════════════════════════════════════════');
 
   try {
     // STAGE 1: Fetch data from FotMob API
-    console.log('[Scraper] [STAGE 1/4] Fetching data from FotMob API...');
+    console.log('[Ingestion] [STAGE 1/4] Fetching data from FotMob API...');
     const fetchStart = Date.now();
     const { teams, players } = await scrapeLeague(LEAGUE_NAME);
     const fetchDuration = ((Date.now() - fetchStart) / 1000).toFixed(1);
-    console.log(`[Scraper] [STAGE 1/4] API fetch complete in ${fetchDuration}s`);
-    console.log(`[Scraper]   📥 Teams fetched: ${teams.length}`);
-    console.log(`[Scraper]   📥 Players fetched: ${players.length}`);
+    console.log(`[Ingestion] [STAGE 1/4] API fetch complete in ${fetchDuration}s`);
+    console.log(`[Ingestion]   📥 Teams fetched: ${teams.length}`);
+    console.log(`[Ingestion]   📥 Players fetched: ${players.length}`);
+    console.log(`[Ingestion]   📥 Data source used: FotMob (fotmob.com/api)`);
 
     if (teams.length === 0) {
-      console.error(`[Scraper] ❌ WARNING: No team data returned for ${LEAGUE_NAME}`);
+      console.error(`[Ingestion] ❌ WARNING: No team data returned for ${LEAGUE_NAME} — scraper returned 0 teams`);
     }
     if (players.length === 0) {
-      console.error(`[Scraper] ❌ WARNING: No player data returned for ${LEAGUE_NAME}`);
+      console.error(`[Ingestion] ❌ WARNING: No player data returned for ${LEAGUE_NAME} — scraper returned 0 players`);
     }
 
     // STAGE 2: Upsert teams into database
-    console.log('[Scraper] [STAGE 2/4] Inserting/updating teams in database...');
+    console.log('[Ingestion] [STAGE 2/4] Inserting/updating teams in database...');
+    const teamStart = Date.now();
     for (const team of teams) {
       try {
         const normalized = normalizeTeamData(team, CURRENT_SEASON, LEAGUE_NAME);
         await upsertTeam(normalized);
         teamsUpserted++;
-        console.log(`[Scraper]   ✅ Team upserted: ${team.name} (${teamsUpserted}/${teams.length})`);
+        console.log(`[Ingestion]   ✅ Team upserted: ${team.name} (${teamsUpserted}/${teams.length})`);
       } catch (error) {
         const msg = `Failed to upsert team ${team.name}: ${error instanceof Error ? error.message : String(error)}`;
-        console.error(`[Scraper]   ❌ ${msg}`);
+        console.error(`[Ingestion]   ❌ ${msg}`);
         errors.push(msg);
       }
     }
-    console.log(`[Scraper] [STAGE 2/4] Teams complete: ${teamsUpserted} upserted, ${errors.length} errors`);
+    const teamDuration = ((Date.now() - teamStart) / 1000).toFixed(1);
+    console.log(`[Ingestion] [STAGE 2/4] Teams complete in ${teamDuration}s: ${teamsUpserted} upserted, ${errors.length} errors`);
 
     // STAGE 3: Upsert players into database
-    console.log('[Scraper] [STAGE 3/4] Inserting/updating players in database...');
+    console.log('[Ingestion] [STAGE 3/4] Inserting/updating players in database...');
+    const playerStart = Date.now();
     for (const player of players) {
       try {
         const normalized = normalizePlayerData(player, CURRENT_SEASON, LEAGUE_NAME);
         await upsertPlayer(normalized);
         playersUpserted++;
         if (playersUpserted % 25 === 0 || playersUpserted === players.length) {
-          console.log(`[Scraper]   💾 Players progress: ${playersUpserted}/${players.length} upserted`);
+          console.log(`[Ingestion]   💾 Players progress: ${playersUpserted}/${players.length} upserted`);
         }
       } catch (error) {
         const msg = `Failed to upsert player ${player.name}: ${error instanceof Error ? error.message : String(error)}`;
-        console.error(`[Scraper]   ❌ ${msg}`);
+        console.error(`[Ingestion]   ❌ ${msg}`);
         errors.push(msg);
       }
     }
-    console.log(`[Scraper] [STAGE 3/4] Players complete: ${playersUpserted} upserted, ${errors.length} total errors`);
+    const playerDuration = ((Date.now() - playerStart) / 1000).toFixed(1);
+    console.log(`[Ingestion] [STAGE 3/4] Players complete in ${playerDuration}s: ${playersUpserted} upserted, ${errors.length} total errors`);
 
-    // STAGE 4: Verify data in database
-    console.log('[Scraper] [STAGE 4/4] Verifying data in database...');
+    // STAGE 4: Verify data in database — final counts
+    console.log('[Ingestion] [STAGE 4/4] Verifying data in database...');
     try {
       const db = getPool();
       const totalCheck = await db.query('SELECT COUNT(*) as count FROM players');
@@ -100,18 +106,28 @@ export async function runScrape(): Promise<ScrapeResult> {
         'SELECT COUNT(*) as count FROM players WHERE league = $1 AND season = $2',
         [LEAGUE_NAME, CURRENT_SEASON]
       );
-      console.log(`[Scraper]   📊 Total players in DB: ${totalCheck.rows[0].count}`);
-      console.log(`[Scraper]   📊 Players for season ${CURRENT_SEASON}: ${seasonCheck.rows[0].count}`);
-      console.log(`[Scraper]   📊 Players for ${LEAGUE_NAME} ${CURRENT_SEASON}: ${leagueCheck.rows[0].count}`);
+      const sourceCheck = await db.query(
+        `SELECT source, COUNT(*) as count FROM players WHERE season = $1 GROUP BY source ORDER BY count DESC`,
+        [CURRENT_SEASON]
+      );
+
+      console.log(`[Ingestion]   📊 Total players in DB: ${totalCheck.rows[0].count}`);
+      console.log(`[Ingestion]   📊 Players for season ${CURRENT_SEASON}: ${seasonCheck.rows[0].count}`);
+      console.log(`[Ingestion]   📊 Players for ${LEAGUE_NAME} ${CURRENT_SEASON}: ${leagueCheck.rows[0].count}`);
+      console.log(`[Ingestion]   📊 Players by source for ${CURRENT_SEASON}:`);
+      for (const row of sourceCheck.rows) {
+        console.log(`[Ingestion]       ${(row as Record<string, unknown>).source ?? 'NULL'}: ${(row as Record<string, unknown>).count}`);
+      }
     } catch (dbErr) {
-      console.error(`[Scraper]   ❌ Failed to verify player count: ${dbErr instanceof Error ? dbErr.message : String(dbErr)}`);
+      console.error(`[Ingestion]   ❌ Failed to verify player count: ${dbErr instanceof Error ? dbErr.message : String(dbErr)}`);
     }
 
     const duration = (Date.now() - startTime) / 1000;
     console.log('═══════════════════════════════════════════════════════');
-    console.log(`✅ SCRAPER FINISHED in ${duration.toFixed(1)}s`);
-    console.log(`   Teams: ${teamsUpserted}/${teams.length} upserted`);
-    console.log(`   Players: ${playersUpserted}/${players.length} upserted`);
+    console.log(`✅ INGESTION FINISHED in ${duration.toFixed(1)}s`);
+    console.log(`   Data source: FotMob scraper`);
+    console.log(`   Teams processed: ${teams.length}, Upserted: ${teamsUpserted}`);
+    console.log(`   Players fetched: ${players.length}, Upserted: ${playersUpserted}`);
     console.log(`   Errors: ${errors.length}`);
     console.log('═══════════════════════════════════════════════════════');
 
@@ -123,10 +139,10 @@ export async function runScrape(): Promise<ScrapeResult> {
       duration,
     };
   } catch (error) {
-    const msg = `Scrape failed: ${error instanceof Error ? error.message : String(error)}`;
-    console.error(`[Scraper] ❌ FATAL: ${msg}`);
+    const msg = `Ingestion failed: ${error instanceof Error ? error.message : String(error)}`;
+    console.error(`[Ingestion] ❌ FATAL: ${msg}`);
     if (error instanceof Error && error.stack) {
-      console.error(`[Scraper]   Stack: ${error.stack}`);
+      console.error(`[Ingestion]   Stack: ${error.stack}`);
     }
     errors.push(msg);
 

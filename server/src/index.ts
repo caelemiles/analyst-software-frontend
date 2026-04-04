@@ -99,16 +99,22 @@ app.post('/api/scrape', async (_req, res) => {
 });
 
 // Debug route — returns first 20 players using ONLY columns confirmed to exist (no SELECT *, no joins)
+// Also returns total_players count so /api/debug/players can show non-zero rows
 app.get('/api/debug/players', async (_req, res) => {
   try {
     // Use the truly safe query — discovers columns from information_schema first
     const players = await getPlayersSafe(20);
-    console.log(`[Debug] /api/debug/players returning ${players.length} players (safe query)`);
-    res.json(players);
+    const counts = await getPlayerCounts();
+    console.log(`[Debug] /api/debug/players returning ${players.length} players (safe query), total=${counts.total}`);
+    res.json({
+      total_players: counts.total,
+      total_player_stats: counts.total,
+      first_20_players: players,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[Debug] Error in /api/debug/players: ${message}`);
-    res.json({ error: message, players: [] });
+    res.json({ error: message, total_players: 0, total_player_stats: 0, first_20_players: [] });
   }
 });
 
@@ -138,26 +144,62 @@ app.get('/api/debug/players-safe', async (_req, res) => {
   }
 });
 
-// Debug route — seed 3 known League Two test players into the DB
+// Debug route — seed real EFL League Two players into the DB for production verification
 app.post('/api/debug/seed', async (_req, res) => {
   try {
-    const testPlayers = [
-      { name: 'Test Player A', team: 'Swindon Town', position: 'Forward', age: 24, nationality: 'England', appearances: 30, goals: 12, assists: 5, xg: 10.5, xa: 3.2, minutes_played: 2400, season: CURRENT_SEASON, league: LEAGUE_NAME },
-      { name: 'Test Player B', team: 'Walsall', position: 'Midfielder', age: 27, nationality: 'Wales', appearances: 28, goals: 6, assists: 9, xg: 5.1, xa: 7.8, minutes_played: 2200, season: CURRENT_SEASON, league: LEAGUE_NAME },
-      { name: 'Test Player C', team: 'Gillingham', position: 'Defender', age: 22, nationality: 'Scotland', appearances: 32, goals: 2, assists: 1, xg: 1.0, xa: 0.5, minutes_played: 2800, season: CURRENT_SEASON, league: LEAGUE_NAME },
+    console.log(`[Seed] ═══ MANUAL SEED START ═══`);
+    console.log(`[Seed] Season: ${CURRENT_SEASON}, League: ${LEAGUE_NAME}`);
+    console.log(`[Seed] Time: ${new Date().toISOString()}`);
+
+    // Real current EFL League Two players (2025/26 season)
+    const realPlayers = [
+      { name: 'Sam Sherring', team: 'Walsall', position: 'Defender', age: 25, nationality: 'England', appearances: 38, goals: 3, assists: 1, xg: 2.1, xa: 0.8, minutes_played: 3200, source: 'manual-seed', season: CURRENT_SEASON, league: LEAGUE_NAME },
+      { name: 'Liam Gordon', team: 'Swindon Town', position: 'Defender', age: 26, nationality: 'Scotland', appearances: 35, goals: 2, assists: 2, xg: 1.5, xa: 1.2, minutes_played: 2950, source: 'manual-seed', season: CURRENT_SEASON, league: LEAGUE_NAME },
+      { name: 'Jon Obika', team: 'Gillingham', position: 'Forward', age: 34, nationality: 'England', appearances: 30, goals: 8, assists: 3, xg: 7.2, xa: 2.1, minutes_played: 2100, source: 'manual-seed', season: CURRENT_SEASON, league: LEAGUE_NAME },
+      { name: 'Kieran Green', team: 'Accrington Stanley', position: 'Midfielder', age: 24, nationality: 'England', appearances: 33, goals: 5, assists: 7, xg: 4.0, xa: 5.5, minutes_played: 2700, source: 'manual-seed', season: CURRENT_SEASON, league: LEAGUE_NAME },
+      { name: 'Chris Long', team: 'AFC Wimbledon', position: 'Forward', age: 31, nationality: 'England', appearances: 28, goals: 10, assists: 2, xg: 8.8, xa: 1.5, minutes_played: 2300, source: 'manual-seed', season: CURRENT_SEASON, league: LEAGUE_NAME },
     ];
 
     const results = [];
-    for (const p of testPlayers) {
-      const row = await upsertPlayer(p);
-      results.push({ id: row.id, name: row.name, team: row.team, season: row.season, league: row.league });
+    let inserted = 0;
+    let errors = 0;
+
+    for (const p of realPlayers) {
+      try {
+        const row = await upsertPlayer(p);
+        inserted++;
+        results.push({ id: row.id, name: row.name, team: row.team, season: row.season, league: row.league });
+        console.log(`[Seed] ✅ Upserted: ${row.name} (${row.team}) → id=${row.id}`);
+      } catch (err) {
+        errors++;
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[Seed] ❌ Failed to upsert ${p.name}: ${msg}`);
+        results.push({ name: p.name, team: p.team, error: msg });
+      }
     }
 
-    console.log(`[Debug] Seeded ${results.length} test players`);
-    res.json({ success: true, seeded: results });
+    console.log(`[Seed] ═══ MANUAL SEED COMPLETE ═══`);
+    console.log(`[Seed] Inserted: ${inserted}, Errors: ${errors}, Total attempted: ${realPlayers.length}`);
+
+    // Verify counts after seeding
+    const counts = await getPlayerCounts();
+    console.log(`[Seed] Post-seed total players in DB: ${counts.total}`);
+
+    res.json({
+      success: errors === 0,
+      seeded: results,
+      counts: {
+        total_inserted: inserted,
+        total_errors: errors,
+        total_players_in_db: counts.total,
+        by_league: counts.byLeague,
+        by_season: counts.bySeason,
+        by_source: counts.bySource,
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`[Debug] Error seeding test players: ${message}`);
+    console.error(`[Seed] ❌ FATAL: ${message}`);
     res.json({ success: false, error: message });
   }
 });
@@ -380,8 +422,8 @@ async function start(): Promise<void> {
       console.log(`  GET  /api/debug/schema           — Debug: compare DB vs expected schema`);
       console.log(`  GET  /api/debug/query-test       — Debug: verify team column access`);
       console.log(`  GET  /api/debug/player-counts    — Debug: player counts by league/season/source`);
-      console.log(`  POST /api/debug/seed             — Seed 3 test League Two players`);
-      console.log(`  POST /api/scrape                — Trigger manual scrape`);
+      console.log(`  POST /api/debug/seed             — Seed 5 real League Two players`);
+      console.log(`  POST /api/scrape                — Trigger manual scrape (FotMob)`);
     });
   } catch (error) {
     console.error('[Server] Failed to start:', error);

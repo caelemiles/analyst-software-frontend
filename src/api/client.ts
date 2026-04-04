@@ -198,8 +198,10 @@ function extractPlayerName(r: RawPlayer): string {
 
 function extractPlayerRows(json: unknown): RawPlayer[] {
   if (Array.isArray(json)) return json;
-  if (json && typeof json === 'object' && Array.isArray((json as { players?: unknown }).players)) {
-    return (json as { players: RawPlayer[] }).players;
+  if (json && typeof json === 'object') {
+    const obj = json as Record<string, unknown>;
+    if (Array.isArray(obj.players)) return obj.players as RawPlayer[];
+    if (Array.isArray(obj.first_20_players)) return obj.first_20_players as RawPlayer[];
   }
   return [];
 }
